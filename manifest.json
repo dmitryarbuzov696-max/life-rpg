@@ -1,0 +1,19 @@
+{
+  "_comment": "ФАЙЛ: manifest.json -> сохрани в КОРЕНЬ репозитория GitHub рядом с index.html. Все пути относительные (./), поэтому работает и на username.github.io/repo/.",
+  "name": "Life RPG",
+  "short_name": "Life RPG",
+  "description": "Трекер задач с уровнями, опытом и титулами: игровая и обычная реальность.",
+  "lang": "ru",
+  "start_url": "./index.html",
+  "scope": "./",
+  "id": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#060b18",
+  "theme_color": "#060b18",
+  "icons": [
+    { "src": "./icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "./icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "./icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
