@@ -231,7 +231,7 @@ nav button{transition:color .15s}
 </section>
 
 <section id="tab-notes" class="hide">
-  <div class="seg" style="margin:6px 0 14px"><button data-nv="list" class="on">📋 Все заметки</button><button data-nv="cal">📅 Календарь</button></div>
+  <div class="seg" style="margin:6px 0 14px"><button data-nv="list" class="on">📋 Заметки</button><button data-nv="cal">📅 Календарь</button></div>
   <div id="n-list">
     <input type="text" id="nsearch" placeholder="Поиск по заметкам…" maxlength="60" aria-label="Поиск по заметкам" style="margin-bottom:4px">
     <div class="ncnt" id="ncount"></div>
@@ -239,7 +239,8 @@ nav button{transition:color .15s}
   </div>
   <div id="n-cal" class="hide">
     <div class="card">
-      <div class="calhead"><button class="btn" id="ncPrev" aria-label="Предыдущий месяц">‹</button><b id="ncTitle"></b><button class="btn" id="ncNext" aria-label="Следующий месяц">›</button></div>
+      <div class="calhead"><button class="btn" id="ncPrev" aria-label="Предыдущий месяц">‹</button><button class="btn calttl" id="ncTitle" aria-label="Выбрать месяц и год"></button><button class="btn" id="ncNext" aria-label="Следующий месяц">›</button></div>
+      <div class="calpick hide" id="ncPick"><select id="ncMs" aria-label="Месяц"></select><select id="ncYs" aria-label="Год"></select></div>
       <div class="calgrid dow" id="ncDow"></div>
       <div class="calgrid" id="ncGrid"></div>
       <div class="legend"><span><i class="dot n"></i><span id="ncInfo">заметки</span></span><button class="btn" id="ncToday">Сегодня</button></div>
@@ -489,7 +490,11 @@ function renderNotesList(){
 }
 function renderNotesCal(){
   var t=today(),first=new Date(ncY,ncM,1),dim=new Date(ncY,ncM+1,0).getDate(),off=(first.getDay()+6)%7;
-  $('ncTitle').textContent=cap(first.toLocaleDateString('ru-RU',{month:'long',year:'numeric'}));
+  $('ncTitle').textContent=cap(first.toLocaleDateString('ru-RU',{month:'long',year:'numeric'}))+' ▾';
+  var nms=$('ncMs'),nys=$('ncYs');
+  if(!nms.options.length)['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'].forEach(function(n,i){nms.add(new Option(n,i))});
+  if(!nys.options.length||ncY<+nys.options[0].value||ncY>+nys.options[nys.options.length-1].value){nys.innerHTML='';for(var ny=Math.min(2020,ncY);ny<=Math.max(2060,ncY);ny++)nys.add(new Option(ny,ny))}
+  nms.value=ncM;nys.value=ncY;
   $('ncDow').innerHTML=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'].map(function(x){return '<div>'+x+'</div>'}).join('');
     var h='',mt=0,i,pre=ncY+'-'+p2(ncM+1)+'-';
   for(i=0;i<off;i++)h+='<div></div>';
@@ -721,6 +726,7 @@ document.addEventListener('click',function(e){
     var pm=md.split('-');ncSel=md;ncY=+pm[0];ncM=+pm[1]-1;nView='cal';
     mEdit=null;$('msheet').classList.remove('show');save();render();toast('Отметка сохранена');return;
   }
+  if(id==='ncTitle'){$('ncPick').classList.toggle('hide');return}
   if(id==='calTitle'){$('calPick').classList.toggle('hide');return}
   if(id==='cancelQ'){$('sheet').classList.remove('show');return}
   if(id==='addQ'){
@@ -783,6 +789,8 @@ $('impLbl').addEventListener('keydown',function(e){if(e.key==='Enter'||e.key==='
 document.addEventListener('keydown',function(e){var t=e.target;if(t&&t.dataset&&t.dataset.si&&e.key==='Enter'&&!e.isComposing){e.preventDefault();addSub(t.dataset.si)}});
 $('qt').addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.isComposing){e.preventDefault();$('addQ').click()}});
 $('nsearch').addEventListener('input',function(){nQ=this.value;renderNotes()});
+$('ncMs').addEventListener('change',function(){ncM=+this.value;renderNotes()});
+$('ncYs').addEventListener('change',function(){ncY=+this.value;renderNotes()});
 $('calMs').addEventListener('change',function(){calM=+this.value;renderCal()});
 $('calYs').addEventListener('change',function(){calY=+this.value;renderCal()});
 document.addEventListener('visibilitychange',function(){if(!document.hidden)render()});
@@ -795,7 +803,7 @@ applyUi();render();showTab('quests');
    Работает только по https:// (GitHub Pages) или на localhost. */
 /* >>> При каждом обновлении меняй это число вместе с номером в sw.js (CACHE_NAME), они должны совпадать. */
 /* при каждом обновлении меняй это число вместе с CACHE_NAME в sw.js (должны совпадать) */
-var APP_VER='v18';
+var APP_VER='v19';
 (function(){
   var p=document.getElementById('verPage');if(!p)return;
   var c=document.getElementById('verCache'),h=document.getElementById('verHint'),t=document.getElementById('toast');
