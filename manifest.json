@@ -1,8 +1,8 @@
 {
   "_comment": "ФАЙЛ: manifest.json -> сохрани в КОРЕНЬ репозитория GitHub рядом с index.html. Все пути относительные (./), поэтому работает и на username.github.io/repo/.",
-  "name": "Life RPG",
-  "short_name": "Life RPG",
-  "description": "Трекер задач с уровнями, опытом и титулами: игровая и обычная реальность.",
+  "name": "Daily Planner",
+  "short_name": "Daily Planner",
+  "description": "Ежедневник: задачи, подзадачи, заметки, календарь и серия дней.",
   "lang": "ru",
   "start_url": "./index.html",
   "scope": "./",
