@@ -912,13 +912,13 @@ function calDayHtml(d){
   var xp=0;if(MODE!=='normal')data.done.forEach(function(x){xp+=DIFFS[x.d].xp});
   h+='<div class="sub" style="margin-top:2px">Выполнено: '+data.done.length+(xp?' · +'+xp+' XP':'')+'</div>';
   if(data.done.length){
-    h+='<div class="ch">Выполнено</div>'+data.done.map(function(x){return calItem('g',x.t,(MODE==='normal'?'':'<span class="xp">+'+DIFFS[x.d].xp+' XP</span> · ')+sn(x.s))}).join('');
+    h+='<div class="ch">Выполнено</div>'+data.done.map(function(x){return calItem('g',x.t,MODE==='normal'?'':'<span class="xp">+'+DIFFS[x.d].xp+' XP</span> · '+sn(x.s))}).join('');
   }
   var late=d<t;
   if(data.miss.length||data.open.length){
     h+='<div class="ch">'+(late?'Не выполнено':'Ещё не сделано')+'</div>';
-    h+=data.miss.map(function(q){return calItem('r',q.t,'ежедневная · '+sn(q.s))}).join('');
-    h+=data.open.map(function(q){return calItem('r',q.t,'разовая'+(late?', в этот день ещё была открыта':'')+' · '+sn(q.s))}).join('');
+    h+=data.miss.map(function(q){return calItem('r',q.t,'ежедневная'+(MODE==='normal'?'':' · '+sn(q.s)))}).join('');
+    h+=data.open.map(function(q){return calItem('r',q.t,'разовая'+(late?', в этот день ещё была открыта':'')+(MODE==='normal'?'':' · '+sn(q.s)))}).join('');
   }
   if(!data.done.length&&!data.miss.length&&!data.open.length)h+='<div class="empty">В этот день ничего не отмечено.</div>';
   else if(late&&!data.miss.length&&!data.open.length)h+='<div class="empty">Пропусков не было.</div>';
@@ -1207,7 +1207,7 @@ penalties();buildForm();applyUi();render();showTab('quests');
 /* Регистрация Service Worker (файл sw.js должен лежать рядом с index.html).
    Работает только по https:// (GitHub Pages) или на localhost. */
 /* >>> При каждом обновлении меняй это число вместе с номером в sw.js (CACHE_NAME), они должны совпадать. */
-var APP_VER='v11';
+var APP_VER='v12';
 (function(){
   var p=document.getElementById('verPage');if(!p)return;
   var c=document.getElementById('verCache'),h=document.getElementById('verHint'),t=document.getElementById('toast');
