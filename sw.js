@@ -6,7 +6,7 @@
   ВАЖНО: когда меняешь index.html и выкладываешь заново, увеличь номер в CACHE_NAME
   (v1 -> v2 -> v3), иначе телефон может ещё какое-то время показывать старую версию.
 */
-var CACHE_NAME = 'life-rpg-v2';
+var CACHE_NAME = 'life-rpg-v3';
 var ASSETS = [
   './',
   './index.html',
