@@ -214,6 +214,29 @@ nav button{transition:color .15s}
 .nochar .stage{height:auto;margin:0 0 6px;background:none}
 .nochar .stage .rank{position:static;margin:2px auto 0}
 .normal .pills{justify-content:center;margin-top:8px}
+/* ===== v7: подзадачи и подтверждения ===== */
+.q{flex-wrap:wrap}
+.q.done{opacity:1}.q.done .chk,.q.done .t{opacity:.55}
+.arr{font-size:18px;color:var(--glow);transition:transform .2s}
+.arr.on{transform:rotate(180deg)}
+.qsub{flex:0 0 100%;border-top:1px solid var(--line);padding-top:10px}
+.sb{display:flex;gap:10px;align-items:center;padding:4px 0}
+.sbc{flex:none;width:34px;height:34px;border:2px solid var(--glow);border-radius:9px;background:transparent;color:var(--ok);font-size:18px;cursor:pointer;display:grid;place-items:center;padding:0}
+.sbc:active{background:rgba(58,160,255,.3)}
+.sbc:disabled{opacity:.5;cursor:default}
+.sb.sdone .sbc{border-color:var(--ok)}
+.sb.sdone .sbt{opacity:.55;text-decoration:line-through}
+.sbt{flex:1;min-width:0;overflow-wrap:anywhere}
+.sadd{display:flex;gap:8px;margin-top:6px}
+.sadd input{flex:1;min-width:0;margin-bottom:0}
+.qact{flex:0 0 100%;display:flex;gap:8px;flex-wrap:wrap}
+.qact .btn{flex:1;font-size:14px;padding:9px 10px}
+.btn.red{border-color:var(--red);background:rgba(255,90,106,.12)}
+#cfm{position:fixed;inset:0;background:rgba(2,6,16,.7);display:none;align-items:flex-end;z-index:55}
+#cfm.show{display:flex}
+#cfm .in{width:100%;max-width:560px;margin:0 auto;background:#0a1530;border:1px solid var(--line);border-bottom:0;border-radius:20px 20px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));box-shadow:0 -8px 30px rgba(0,0,0,.5);animation:sheetUp .25s ease-out}
+#cfm p{margin:8px 0 14px;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--dim)}
+@media (prefers-reduced-motion:reduce){#cfm .in,.arr{animation:none;transition:none}}
 </style>
 </head>
 <body>
@@ -324,6 +347,12 @@ nav button{transition:color .15s}
   <label class="sub" for="nd" style="display:block;margin:2px 0 4px">Дата заметки</label>
   <input type="date" id="nd">
   <div class="row" style="margin-top:12px"><button class="btn" id="cancelN">Отмена</button><button class="btn" id="addN" style="flex:1">Сохранить заметку</button></div>
+</div></div>
+
+<div id="cfm" role="dialog" aria-modal="true"><div class="in">
+  <b style="font-size:18px" id="cfm-t"></b>
+  <p id="cfm-p"></p>
+  <div class="row"><button class="btn" id="cfmNo">Отмена</button><button class="btn" id="cfmYes" style="flex:1"></button></div>
 </div></div>
 
 <nav>
@@ -634,11 +663,91 @@ function buildForm(){
   $('qs').innerHTML=STATS.map(function(s){return '<option value="'+s.k+'">'+s.n+'</option>'}).join('');
 }
 var selDiff=1;
+var openQ={};
+function subDone(q,s){return q.daily?s.dd===today():!!s.done}
+function subCount(q){var a=q.subs||[],c=0;a.forEach(function(s){if(subDone(q,s))c++});return{c:c,n:a.length}}
 function qHtml(q){
-  var dn=isDone(q);
+  var dn=isDone(q),sc=subCount(q),open=!!openQ[q.id];
+  var meta=MODE==='normal'?(q.daily?'каждый день':''):'<span class="xp">+'+DIFFS[q.d].xp+' XP</span> · '+DIFFS[q.d].n+' · '+sn(q.s)+(q.daily?' · каждый день':'');
+  if(sc.n)meta+=(meta?' · ':'')+'Подзадачи: '+sc.c+'/'+sc.n;
+  var panel='';
+  if(open){
+    panel='<div class="qsub">'+(q.subs||[]).map(function(s){
+      var sd=subDone(q,s);
+      return '<div class="sb'+(sd?' sdone':'')+'"><button class="sbc" data-sc="'+q.id+'|'+s.id+'" aria-label="Отметить подзадачу"'+(dn?' disabled':'')+'>'+(sd?'✓':'')+'</button><span class="sbt">'+esc(s.t)+'</span>'+(dn?'':'<button class="del" data-sx="'+q.id+'|'+s.id+'" aria-label="Удалить подзадачу">✕</button>')+'</div>';
+    }).join('')+(dn?'':'<div class="sadd"><input type="text" data-si="'+q.id+'" placeholder="Добавить подзадачу" maxlength="120" aria-label="Добавить подзадачу"><button class="btn" data-sa="'+q.id+'">Добавить</button></div>')+'</div>';
+  }
+  var act=dn?'<div class="qact"><button class="btn" data-un="'+q.id+'">↩ Отменить выполнение</button><button class="btn red" data-dd="'+q.id+'">Удалить</button></div>':'';
   return '<div class="card q d'+q.d+(dn?' done':'')+'"><button class="chk" data-c="'+q.id+'" aria-label="Выполнить"'+(dn?' disabled':'')+'>'+(dn?'✓':'')+'</button>'+
-  '<div class="t">'+esc(q.t)+'<div class="m">'+(MODE==='normal'?(q.daily?'каждый день':''):'<span class="xp">+'+DIFFS[q.d].xp+' XP</span> · '+DIFFS[q.d].n+' · '+sn(q.s)+(q.daily?' · каждый день':''))+'</div></div>'+
-  '<button class="del" data-x="'+q.id+'" aria-label="Удалить">✕</button></div>';
+  '<div class="t">'+esc(q.t)+'<div class="m">'+meta+'</div></div>'+
+  (dn?'':'<button class="del" data-x="'+q.id+'" aria-label="Удалить">✕</button>')+
+  (dn&&!sc.n?'':'<button class="del arr'+(open?' on':'')+'" data-ex="'+q.id+'" aria-label="Подзадачи" aria-expanded="'+open+'">▾</button>')+
+  panel+act+'</div>';
+}
+
+/* ---------- Подтверждения, подзадачи, отмена выполнения ---------- */
+var cfmFn=null;
+function closeCfm(){cfmFn=null;$('cfm').classList.remove('show')}
+function ask(title,text,yes,fn,red){
+  cfmFn=fn;$('cfm-t').textContent=title;$('cfm-p').textContent=text;
+  var y=$('cfmYes');y.textContent=yes;y.classList.toggle('red',!!red);
+  $('cfm').classList.add('show');
+}
+function qById(id){return S.quests.filter(function(x){return x.id===id})[0]}
+function askComplete(id){
+  var q=qById(id);if(!q||isDone(q))return;
+  var sc=subCount(q),txt='«'+q.t+'»';
+  if(sc.n&&sc.c<sc.n)txt+='\nВыполнено подзадач: '+sc.c+' из '+sc.n+'.';
+  ask('Отметить выполненной?',txt,'Выполнено',function(){complete(id)});
+}
+function addSub(id){
+  var q=qById(id);if(!q)return;
+  var inp=document.querySelector('[data-si="'+id+'"]'),t=inp?inp.value.trim():'';
+  if(!t){toast('Введи название подзадачи');return}
+  if(!q.subs)q.subs=[];
+  if(q.subs.length>=30){toast('Не больше 30 подзадач');return}
+  q.subs.push({id:uid(),t:t.slice(0,120),done:false,dd:null});
+  save();render();
+  var ni=document.querySelector('[data-si="'+id+'"]');if(ni)ni.focus();
+}
+function toggleSub(qid,sid){
+  var q=qById(qid);if(!q||isDone(q))return;
+  var s=(q.subs||[]).filter(function(x){return x.id===sid})[0];if(!s)return;
+  if(q.daily)s.dd=(s.dd===today()?null:today());else s.done=!s.done;
+  save();render();
+  var sc=subCount(q);
+  if(sc.n&&sc.c===sc.n&&subDone(q,s))ask('Все подзадачи выполнены','Вы выполнили все задачи, отмечаем выполнение основной задачи «'+q.t+'»?','Да, выполнена',function(){complete(qid)});
+}
+function delSub(qid,sid){
+  var q=qById(qid);if(!q)return;
+  q.subs=(q.subs||[]).filter(function(x){return x.id!==sid});save();render();
+}
+function askUndo(id){
+  var q=qById(id);if(!q||!isDone(q))return;
+  ask('Отменить выполнение?','«'+q.t+'»'+(MODE==='normal'?'':'\nОпыт и золото за эту задачу будут возвращены.'),'Отменить выполнение',function(){undoQ(id)});
+}
+function undoQ(id){
+  var q=qById(id);if(!q||!isDone(q))return;
+  var hi=-1,i;
+  for(i=S.hist.length-1;i>=0;i--)if(S.hist[i].t===q.t){hi=i;break}
+  if(q.daily)q.last=null;else q.done=false;
+  if(hi>=0){
+    var h=S.hist.splice(hi,1)[0],xp=MODE==='normal'?0:DIFFS[h.d].xp;
+    for(i=S.log.length-1;i>=0;i--)if(S.log[i].d===h.date&&S.log[i].xp===xp){S.log.splice(i,1);break}
+    S.count=Math.max(0,S.count-1);
+    if(MODE!=='normal'){
+      S.xp=Math.max(0,S.xp-xp);S.gold=Math.max(0,S.gold-xp);
+      if(h.d===3)S.bosses=Math.max(0,S.bosses-1);
+      S.stats[h.s]=Math.max(0,(S.stats[h.s]||0)-xp);
+    }
+  }
+  save();render();toast('Выполнение отменено');
+}
+function askDelDone(id){
+  var q=qById(id);if(!q)return;
+  ask('Удалить задачу?','«'+q.t+'»'+(MODE==='normal'?'':'\nУже полученный опыт сохранится.'),'Удалить',function(){
+    S.quests=S.quests.filter(function(x){return x.id!==id});S.deleted++;delete openQ[id];save();render();toast('Задача удалена');
+  },true);
 }
 function render(){
   var L=lv(S.xp),r=rk(L.l),nx=RANKS.filter(function(x){return x[0]>L.l})[0];
@@ -961,8 +1070,14 @@ function setMode(m){
 document.addEventListener('click',function(e){
   if(e.target.closest('#lvl')){$('lvl').classList.remove('show');return}
   var b=e.target.closest('button');
-  if(!b){if(e.target.id==='sheet')$('sheet').classList.remove('show');if(e.target.id==='nsheet')$('nsheet').classList.remove('show');return}
+  if(!b){if(e.target.id==='sheet')$('sheet').classList.remove('show');if(e.target.id==='nsheet')$('nsheet').classList.remove('show');if(e.target.id==='cfm')closeCfm();return}
   var D=b.dataset;
+  if(D.ex){openQ[D.ex]=!openQ[D.ex];render();return}
+  if(D.sa){addSub(D.sa);return}
+  if(D.sc){var psc=D.sc.split('|');toggleSub(psc[0],psc[1]);return}
+  if(D.sx){var psx=D.sx.split('|');arm(b,function(){delSub(psx[0],psx[1])});return}
+  if(D.un){askUndo(D.un);return}
+  if(D.dd){askDelDone(D.dd);return}
   if(D.nv){nView=D.nv;renderNotes();return}
   if(D.nday){ncSel=D.nday;renderNotes();return}
   if(D.nadd){openNote(null);return}
@@ -971,7 +1086,7 @@ document.addEventListener('click',function(e){
   if(D.mode){setMode(D.mode);return}
   if(D.tab){showTab(D.tab);return}
   if(D.d!==undefined){selDiff=+D.d;buildForm();return}
-  if(D.c){complete(D.c);return}
+  if(D.c){askComplete(D.c);return}
   if(D.dis){S.penNote=null;save();render();return}
   if(D.cat){sugCat=D.cat;render();return}
   if(D.day){calSel=D.day;renderCal();return}
@@ -990,6 +1105,8 @@ document.addEventListener('click',function(e){
   if(id==='ncNext'){ncM++;if(ncM>11){ncM=0;ncY++}renderNotes();return}
   if(id==='ncToday'){ncInit();renderNotes();return}
   if(id==='cancelN'){$('nsheet').classList.remove('show');return}
+  if(id==='cfmNo'){closeCfm();return}
+  if(id==='cfmYes'){var cf=cfmFn;closeCfm();if(cf)cf();return}
   if(id==='fab'){if(curTab==='notes')openNote(null);else{$('sheet').classList.add('show');$('qt').focus()}return}
   if(id==='cancelQ'){$('sheet').classList.remove('show');return}
   if(id==='addQ'){
@@ -1060,6 +1177,7 @@ $('impFile').addEventListener('change',function(){
   r.readAsText(f);
 });
 $('impLbl').addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();$('impFile').click()}});
+document.addEventListener('keydown',function(e){var t=e.target;if(t&&t.dataset&&t.dataset.si&&e.key==='Enter'&&!e.isComposing){e.preventDefault();addSub(t.dataset.si)}});
 $('qt').addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.isComposing){e.preventDefault();$('addQ').click()}});
 $('nsearch').addEventListener('input',function(){nQ=this.value;renderNotes()});
 $('name').addEventListener('input',function(){S.name=this.value;save()});
