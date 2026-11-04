@@ -614,7 +614,7 @@ function calDayHtml(d){
   return h;
 }
 function syncLists(){
-  var fut=calSel>today()&&!$('calBox').classList.contains('hide');
+  var fut=calSel!==today()&&!$('calBox').classList.contains('hide');
   $('calDay').classList.toggle('hide',calSel===today());
   ['hAct','active','hDone','doneList'].forEach(function(i){$(i).classList.toggle('hide',fut)});
 }
@@ -833,7 +833,7 @@ applyUi();render();showTab('quests');
    Работает только по https:// (GitHub Pages) или на localhost. */
 /* >>> При каждом обновлении меняй это число вместе с номером в sw.js (CACHE_NAME), они должны совпадать. */
 /* при каждом обновлении меняй это число вместе с CACHE_NAME в sw.js (должны совпадать) */
-var APP_VER='v22';
+var APP_VER='v23';
 (function(){
   var p=document.getElementById('verPage');if(!p)return;
   var c=document.getElementById('verCache'),h=document.getElementById('verHint'),t=document.getElementById('toast');
