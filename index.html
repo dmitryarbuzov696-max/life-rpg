@@ -220,6 +220,8 @@ nav button{transition:color .15s}
 .arr{flex:none;width:40px;height:40px;display:grid;place-items:center;padding:0;border:1px solid var(--glow);border-radius:50%;background:rgba(58,160,255,.14);color:var(--glow);cursor:pointer;box-shadow:0 0 8px rgba(58,160,255,.25);transition:transform .2s,background .15s}
 .arr:active{background:rgba(58,160,255,.38)}
 .arr.on{transform:rotate(180deg);background:rgba(58,160,255,.28)}
+/* в выпадающих окнах содержимое наследовало content-box, из-за чего кнопки на всю ширину вылезали за рамку */
+.acc>div,.acc>div *{box-sizing:border-box}
 .qfoot{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
 .sm{background:none;border:1px solid var(--line);color:var(--dim);border-radius:8px;padding:4px 10px;min-height:30px;font:600 12.5px "Exo 2",system-ui,sans-serif;cursor:pointer}
 .sm:active{background:rgba(58,160,255,.2)}
@@ -326,13 +328,15 @@ nav button{transition:color .15s}
     <p class="sub" style="margin:6px 0 10px">Сохрани файл и отправь его мне в чат со словами «составь новые <span id="an-w">квесты</span>». Я посмотрю, что тебе даётся, а что нет.</p>
     <button class="btn full gold" id="expA" style="margin-bottom:8px">Выгрузить аналитику</button>
   </div></details>
-  <details class="acc" id="dataBox"><summary><span>💾 Резервная копия и версия</span></summary><div>
+  <details class="acc" id="dataBox"><summary><span>💾 Резервная копия и импорт</span></summary><div>
     <b>Резервная копия и импорт</b>
     <p class="sub" style="margin:6px 0 10px">Прогресс хранится в памяти телефона. Сохрани копию файлом и при смене телефона или очистке данных восстанови её. Кнопка импорта принимает и копию прогресса, и файл с квестами от Клода (JSON).</p>
     <div class="row"><button class="btn" id="expB">Сохранить копию</button><label class="btn" for="impFile" id="impLbl" role="button" tabindex="0">Импортировать из файла</label></div>
     <!-- Скрытый input: НЕ display:none, а «невидимый» (так надёжнее открывается файловый менеджер на iOS и Android) -->
     <input type="file" id="impFile" class="vh" accept=".json,application/json,text/plain">
-    <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line)">
+  </div></details>
+  <details class="acc" id="verBox"><summary><span>🔄 Версия приложения</span></summary><div>
+    <div style="margin-top:4px">
       <b>Версия приложения</b>
       <div class="stats" style="grid-template-columns:1fr;margin-top:6px"><div class="stat"><span>Эта страница</span><b id="verPage">—</b></div><div class="stat"><span>Загруженный кэш</span><b id="verCache">—</b></div></div>
       <p class="sub" id="verHint" style="margin:8px 0 10px"></p>
@@ -1203,7 +1207,7 @@ penalties();buildForm();applyUi();render();showTab('quests');
 /* Регистрация Service Worker (файл sw.js должен лежать рядом с index.html).
    Работает только по https:// (GitHub Pages) или на localhost. */
 /* >>> При каждом обновлении меняй это число вместе с номером в sw.js (CACHE_NAME), они должны совпадать. */
-var APP_VER='v10';
+var APP_VER='v11';
 (function(){
   var p=document.getElementById('verPage');if(!p)return;
   var c=document.getElementById('verCache'),h=document.getElementById('verHint'),t=document.getElementById('toast');
