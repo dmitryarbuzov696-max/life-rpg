@@ -249,8 +249,8 @@ nav button{transition:color .15s}
   </div>
   <div class="card" id="calDay"></div>
   </div>
-  <h2>Активные</h2><div id="active"></div>
-  <h2>Выполнено</h2><div id="doneList"></div>
+  <h2 id="hAct">Активные</h2><div id="active"></div>
+  <h2 id="hDone">Выполнено</h2><div id="doneList"></div>
 </section>
 
 <section id="tab-notes" class="hide">
@@ -586,10 +586,11 @@ function calItem(cls,title,meta){return '<div class="cdl"><i class="dot '+cls+'"
 function calDayHtml(d){
   var t=today(),pp=d.split('-'),dd=new Date(+pp[0],+pp[1]-1,+pp[2]),data=dayData(d);
   var head=cap(dd.toLocaleDateString('ru-RU',{weekday:'long',day:'numeric',month:'long',year:'numeric'}));
-  var h='<b style="font-size:17px">'+head+'</b>'+(d===t?' <span class="xp">· сегодня</span>':'');
+  var h='<b style="font-size:17px">'+head+'</b>'+'';
   if(d>t){
     var sc=S.quests.filter(function(q){return q.due===d&&!isDone(q)});
-    h+='<div class="sub" style="margin-top:2px">Запланировано: '+sc.length+'</div>';
+    var td_=t.split('-'),nd_=Math.round((Date.UTC(+pp[0],+pp[1]-1,+pp[2])-Date.UTC(+td_[0],+td_[1]-1,+td_[2]))/864e5),m10=nd_%10,m100=nd_%100;
+    h+='<div class="sub" style="margin-top:2px">Наступит через '+nd_+' '+(m10===1&&m100!==11?'день':(m10>=2&&m10<=4&&(m100<12||m100>14)?'дня':'дней'))+'</div>';
     h+=sc.length?sc.map(function(q){return '<div class="cdl"><i class="dot s"></i><div class="t">'+esc(q.t)+'<div class="m">'+(q.daily?'ежедневная, с этого дня':'запланирована')+'</div></div><button class="del" data-x="'+q.id+'" aria-label="Удалить задачу">✕</button></div>'}).join(''):'<div class="empty">На этот день задач нет.</div>';
     return h;
   }
@@ -612,6 +613,11 @@ function calDayHtml(d){
   else if(late&&!data.miss.length&&!data.open.length)h+='<div class="empty">Пропусков не было.</div>';
   return h;
 }
+function syncLists(){
+  var fut=calSel>today()&&!$('calBox').classList.contains('hide');
+  $('calDay').classList.toggle('hide',calSel===today());
+  ['hAct','active','hDone','doneList'].forEach(function(i){$(i).classList.toggle('hide',fut)});
+}
 function renderCal(){
   if(!calY)calInit();
   var t=today(),first=new Date(calY,calM,1),dim=new Date(calY,calM+1,0).getDate(),off=(first.getDay()+6)%7;
@@ -633,6 +639,7 @@ function renderCal(){
   }
   $('calGrid').innerHTML=h;
   $('calDay').innerHTML=calDayHtml(calSel);
+  syncLists();
 }
 var tt_;
 function toast(t,ms){var e=$('toast');e.textContent=t;e.classList.add('show');clearTimeout(tt_);tt_=setTimeout(function(){e.classList.remove('show')},ms||1800)}
@@ -736,7 +743,7 @@ document.addEventListener('click',function(e){
   if(id==='cfmNo'){closeCfm();return}
   if(id==='cfmYes'){var cf=cfmFn;closeCfm();if(cf)cf();return}
   if(id==='fab'){if(curTab==='notes'){if(nView==='cal')openMark(null,ncSel);else openNote(null)}else openQuestSheet(calSel);return}
-  if(id==='calToggle'){var hid=$('calBox').classList.toggle('hide');b.setAttribute('aria-expanded',hid?'false':'true');$('calArr').textContent=hid?'▾':'▴';return}
+  if(id==='calToggle'){var hid=$('calBox').classList.toggle('hide');b.setAttribute('aria-expanded',hid?'false':'true');$('calArr').textContent=hid?'▾':'▴';syncLists();return}
   if(id==='cancelM'){$('msheet').classList.remove('show');return}
   if(id==='addM'){
     var mt=$('mt').value.trim(),md=$('md').value;
@@ -826,7 +833,7 @@ applyUi();render();showTab('quests');
    Работает только по https:// (GitHub Pages) или на localhost. */
 /* >>> При каждом обновлении меняй это число вместе с номером в sw.js (CACHE_NAME), они должны совпадать. */
 /* при каждом обновлении меняй это число вместе с CACHE_NAME в sw.js (должны совпадать) */
-var APP_VER='v20';
+var APP_VER='v22';
 (function(){
   var p=document.getElementById('verPage');if(!p)return;
   var c=document.getElementById('verCache'),h=document.getElementById('verHint'),t=document.getElementById('toast');
