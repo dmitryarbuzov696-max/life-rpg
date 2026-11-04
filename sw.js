@@ -6,7 +6,9 @@
   ВАЖНО: когда меняешь index.html и выкладываешь заново, увеличь номер в CACHE_NAME
   (v1 -> v2 -> v3), иначе телефон может ещё какое-то время показывать старую версию.
 */
-var CACHE_NAME = 'life-rpg-v1';
+/* >>> ПРИ КАЖДОМ ОБНОВЛЕНИИ САЙТА ПРИБАВЛЯЙ К НОМЕРУ ОДНУ ЦИФРУ (v16 -> v17 -> v18 ...).
+   Иначе телефон может ещё долго показывать старую версию из кэша. Меняется только число в строке ниже. */
+var CACHE_NAME = 'life-rpg-v16';
 var ASSETS = [
   './',
   './index.html',
@@ -20,7 +22,14 @@ var ASSETS = [
 self.addEventListener('install', function (e) {
   e.waitUntil(
     caches.open(CACHE_NAME)
-      .then(function (c) { return c.addAll(ASSETS); })
+      .then(function (c) {
+        /* cache:'reload' = брать файлы с сервера, а не из HTTP-кэша браузера (GitHub Pages кэширует на 10 минут) */
+        return Promise.all(ASSETS.map(function (u) {
+          return fetch(new Request(u, { cache: 'reload' }))
+            .then(function (r) { if (r && r.ok) return c.put(u, r); })
+            .catch(function () {});
+        }));
+      })
       .then(function () { return self.skipWaiting(); })
   );
 });
@@ -30,7 +39,8 @@ self.addEventListener('activate', function (e) {
   e.waitUntil(
     caches.keys()
       .then(function (keys) {
-        return Promise.all(keys.filter(function (k) { return k !== CACHE_NAME; })
+        /* удаляем только наши кэши старых версий (префикс life-rpg-), чужие не трогаем */
+        return Promise.all(keys.filter(function (k) { return k.indexOf('life-rpg-') === 0 && k !== CACHE_NAME; })
           .map(function (k) { return caches.delete(k); }));
       })
       .then(function () { return self.clients.claim(); })
@@ -43,7 +53,7 @@ self.addEventListener('fetch', function (e) {
   if (req.method !== 'GET') return;
   if (new URL(req.url).origin !== self.location.origin) return;
   e.respondWith(
-    fetch(req)
+    fetch(req, { cache: 'no-store' })
       .then(function (res) {
         if (res && res.ok) {
           var copy = res.clone();
