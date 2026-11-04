@@ -217,8 +217,14 @@ nav button{transition:color .15s}
 /* ===== v7: подзадачи и подтверждения ===== */
 .q{flex-wrap:wrap}
 .q.done{opacity:1}.q.done .chk,.q.done .t{opacity:.55}
-.arr{font-size:18px;color:var(--glow);transition:transform .2s}
-.arr.on{transform:rotate(180deg)}
+.arr{flex:none;width:40px;height:40px;display:grid;place-items:center;padding:0;border:1px solid var(--glow);border-radius:50%;background:rgba(58,160,255,.14);color:var(--glow);cursor:pointer;box-shadow:0 0 8px rgba(58,160,255,.25);transition:transform .2s,background .15s}
+.arr:active{background:rgba(58,160,255,.38)}
+.arr.on{transform:rotate(180deg);background:rgba(58,160,255,.28)}
+.qfoot{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
+.sm{background:none;border:1px solid var(--line);color:var(--dim);border-radius:8px;padding:4px 10px;min-height:30px;font:600 12.5px "Exo 2",system-ui,sans-serif;cursor:pointer}
+.sm:active{background:rgba(58,160,255,.2)}
+.sm.red{color:#ff9aa5;border-color:rgba(255,90,106,.45)}
+.sm.arm{color:var(--red);border-color:var(--red);background:rgba(255,90,106,.15)}
 .qsub{flex:0 0 100%;border-top:1px solid var(--line);padding-top:10px}
 .sb{display:flex;gap:10px;align-items:center;padding:4px 0}
 .sbc{flex:none;width:34px;height:34px;border:2px solid var(--glow);border-radius:9px;background:transparent;color:var(--ok);font-size:18px;cursor:pointer;display:grid;place-items:center;padding:0}
@@ -675,13 +681,13 @@ function qHtml(q){
     panel='<div class="qsub">'+(q.subs||[]).map(function(s){
       var sd=subDone(q,s);
       return '<div class="sb'+(sd?' sdone':'')+'"><button class="sbc" data-sc="'+q.id+'|'+s.id+'" aria-label="Отметить подзадачу"'+(dn?' disabled':'')+'>'+(sd?'✓':'')+'</button><span class="sbt">'+esc(s.t)+'</span>'+(dn?'':'<button class="del" data-sx="'+q.id+'|'+s.id+'" aria-label="Удалить подзадачу">✕</button>')+'</div>';
-    }).join('')+(dn?'':'<div class="sadd"><input type="text" data-si="'+q.id+'" placeholder="Добавить подзадачу" maxlength="120" aria-label="Добавить подзадачу"><button class="btn" data-sa="'+q.id+'">Добавить</button></div>')+'</div>';
+    }).join('')+(dn?'':'<div class="sadd"><input type="text" data-si="'+q.id+'" placeholder="Добавить подзадачу" maxlength="120" aria-label="Добавить подзадачу"><button class="btn" data-sa="'+q.id+'">Добавить</button></div>')+
+    '<div class="qfoot">'+(dn?'<button class="sm" data-un="'+q.id+'">↩ Отменить выполнение</button><button class="sm red" data-dd="'+q.id+'">Удалить</button>':'<button class="sm red" data-x="'+q.id+'">Удалить задание</button>')+'</div></div>';
   }
-  var act=dn?'<div class="qact"><button class="btn" data-un="'+q.id+'">↩ Отменить выполнение</button><button class="btn red" data-dd="'+q.id+'">Удалить</button></div>':'';
+  var act='';
   return '<div class="card q d'+q.d+(dn?' done':'')+'"><button class="chk" data-c="'+q.id+'" aria-label="Выполнить"'+(dn?' disabled':'')+'>'+(dn?'✓':'')+'</button>'+
   '<div class="t">'+esc(q.t)+'<div class="m">'+meta+'</div></div>'+
-  (dn?'':'<button class="del" data-x="'+q.id+'" aria-label="Удалить">✕</button>')+
-  (dn&&!sc.n?'':'<button class="del arr'+(open?' on':'')+'" data-ex="'+q.id+'" aria-label="Подзадачи" aria-expanded="'+open+'">▾</button>')+
+  '<button class="arr'+(open?' on':'')+'" data-ex="'+q.id+'" aria-label="Подробности и подзадачи" aria-expanded="'+open+'"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>'+
   panel+act+'</div>';
 }
 
