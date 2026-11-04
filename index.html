@@ -160,6 +160,18 @@ input[type=date]{display:block;min-height:46px;-webkit-appearance:none;appearanc
 .sws{display:flex;gap:10px;flex-wrap:wrap;margin:2px 0 10px}
 .sw{width:34px;height:34px;border-radius:50%;border:2px solid var(--line);cursor:pointer;padding:0}
 input[type=color]{display:block;width:100%;height:46px;padding:3px;background:#071026;border:1px solid var(--line);border-radius:6px;margin-bottom:10px;cursor:pointer}
+/* ===== v24: компактные заметки, действия выезжают справа налево ===== */
+.note{padding:10px 12px 2px}
+.ntitle{margin-bottom:2px;font-size:16px}
+.note p{margin:0 0 2px}
+.nfoot{margin:0 -6px 0 0;min-height:36px}
+.nfoot .nb,.nfoot .del{box-sizing:border-box;width:30px;height:30px;min-width:30px;min-height:30px;padding:0;margin:0 0 0 4px;border:1px solid var(--line);border-radius:8px;background:rgba(7,16,38,.6);display:inline-flex;align-items:center;justify-content:center;flex:none;font-size:14px;line-height:1}
+.nfoot .del.arm{width:auto;padding:0 8px;white-space:nowrap;font-size:12px;border-color:var(--red)}
+.nact{display:flex;align-items:center;overflow:hidden;max-width:0;opacity:0;visibility:hidden;transition:max-width .25s ease,opacity .2s,visibility 0s .25s}
+.nfoot.open .nact{max-width:190px;opacity:1;visibility:visible;transition-delay:0s}
+.nb.ar span{display:inline-flex;align-items:center;justify-content:center;transition:transform .25s}
+.nfoot.open .nb.ar span{transform:rotate(180deg)}
+@media (prefers-reduced-motion:reduce){.nact,.nb.ar span{transition:none}}
 /* ===== v4: аккуратность и удобство (цвета не менялись) ===== */
 html{-webkit-text-size-adjust:100%}
 *{-webkit-tap-highlight-color:transparent}
@@ -273,8 +285,6 @@ nav button{transition:color .15s}
 </section>
 
 <section id="tab-prof" class="hide">
-  <h2>Статистика</h2>
-  <div class="card"><div class="stats" id="stats"></div></div>
   <h2>Данные</h2>
   <details class="acc" id="dataBox"><summary><span>💾 Резервная копия и импорт</span></summary><div>
     <b>Резервная копия и импорт</b>
@@ -459,12 +469,11 @@ function render(){
   $('active').innerHTML=act.length?act.map(qHtml).join(''):'<div class="empty">Пока нет задач. Нажми +, чтобы добавить первую.</div>';
   $('doneList').innerHTML=dn.length?doneHtml(dn):'<div class="empty">Пока пусто.</div>';
   renderNotes();
-  $('stats').innerHTML='<div class="stat"><span>Всего выполнено</span><b>'+S.count+'</b></div><div class="stat"><span>Серия, дней</span><b>'+streak()+'</b></div>';
   renderCal();
 }
 
 /* ---------- Заметки ---------- */
-var nView='list',ncY=0,ncM=0,ncSel='',nEdit=null,nQ='';
+var nOpen={},nView='list',ncY=0,ncM=0,ncSel='',nEdit=null,nQ='';
 function ncInit(){var q=today().split('-');ncY=+q[0];ncM=+q[1]-1;ncSel=today()}
 function fixMark(m){if(!m||typeof m!=='object'||!/^\d{4}-\d{2}-\d{2}$/.test(m.d))return false;if(typeof m.t!=='string')m.t='';if(!/^#[0-9a-f]{6}$/i.test(m.col||''))m.col='#b07cff';m.yr=!!m.yr;m.id=m.id?String(m.id):uid();return true}
 function marksOn(k){var y=k.slice(0,4),lp=new Date(+y,1,29).getMonth()===1;return S.marks.filter(function(m){return m.d===k||(m.yr&&k>m.d&&(m.d.slice(5)===k.slice(5)||(m.d.slice(5)==='02-29'&&k.slice(5)==='02-28'&&!lp)))})}
@@ -490,10 +499,11 @@ function nHtml(n,showDate){
   return '<div class="card note'+(n.pin?' pin':'')+'">'+
     (n.h?'<div class="ntitle">'+esc(n.h)+'</div>':'')+
     (n.t?'<p>'+esc(n.t)+'</p>':'')+
-    '<div class="nfoot"><span class="m">'+esc(meta.join(' · '))+'</span>'+
+    '<div class="nfoot'+(nOpen[n.id]?' open':'')+'"><span class="m">'+esc(meta.join(' · '))+'</span><span class="nact">'+
     '<button class="nb pn'+(n.pin?' on':'')+'" data-np="'+n.id+'" aria-label="'+(n.pin?'Открепить':'Закрепить')+'" title="Закрепить">📌</button>'+
     '<button class="nb" data-ne="'+n.id+'" aria-label="Редактировать" title="Редактировать">✎</button>'+
-    '<button class="del" data-n="'+n.id+'" aria-label="Удалить">✕</button></div></div>';
+    '<button class="del" data-n="'+n.id+'" aria-label="Удалить">✕</button></span>'+
+    '<button class="nb ar" data-nt="'+n.id+'" aria-label="Действия с заметкой" aria-expanded="'+(nOpen[n.id]?'true':'false')+'"><span><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button></div></div>';
 }
 function nSort(a,b){return (b.d<a.d?-1:b.d>a.d?1:0)||((b.c||0)-(a.c||0))}
 function renderNotesList(){
@@ -717,6 +727,7 @@ document.addEventListener('click',function(e){
   if(D.sx){var psx=D.sx.split('|');arm(b,function(){delSub(psx[0],psx[1])});return}
   if(D.un){askUndo(D.un);return}
   if(D.dd){askDelDone(D.dd);return}
+  if(D.nt){var nf=b.closest('.nfoot'),no=nf.classList.toggle('open');if(no)nOpen[D.nt]=1;else delete nOpen[D.nt];b.setAttribute('aria-expanded',no?'true':'false');return}
   if(D.nv){nView=D.nv;$('fab').setAttribute('aria-label',nView==='cal'?'Новая отметка':'Новая заметка');renderNotes();return}
   if(D.nday){ncSel=D.nday;renderNotes();return}
   if(D.nadd){openNote(null);return}
@@ -833,7 +844,7 @@ applyUi();render();showTab('quests');
    Работает только по https:// (GitHub Pages) или на localhost. */
 /* >>> При каждом обновлении меняй это число вместе с номером в sw.js (CACHE_NAME), они должны совпадать. */
 /* при каждом обновлении меняй это число вместе с CACHE_NAME в sw.js (должны совпадать) */
-var APP_VER='v23';
+var APP_VER='v25';
 (function(){
   var p=document.getElementById('verPage');if(!p)return;
   var c=document.getElementById('verCache'),h=document.getElementById('verHint'),t=document.getElementById('toast');
