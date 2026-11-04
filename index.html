@@ -222,6 +222,17 @@ nav button{transition:color .15s}
 .arr.on{transform:rotate(180deg);background:rgba(58,160,255,.28)}
 /* в выпадающих окнах содержимое наследовало content-box, из-за чего кнопки на всю ширину вылезали за рамку */
 .acc>div,.acc>div *{box-sizing:border-box}
+/* компактные карточки задач */
+.card.q{padding:8px 10px 8px 12px;gap:10px;margin-bottom:8px}
+.q .t{font-size:15px;line-height:1.3}
+.q .m{font-size:12px}
+.chk{width:34px;height:34px;font-size:18px;border-radius:9px}
+.arr{width:32px;height:32px}
+.arr svg{width:16px;height:16px}
+.more{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:38px;margin:0 0 8px;padding:6px;border:1px dashed var(--line);border-radius:10px;background:transparent;color:var(--dim);font:600 13.5px "Exo 2",system-ui,sans-serif;cursor:pointer}
+.more:active{background:rgba(58,160,255,.15)}
+.more svg{width:16px;height:16px;color:var(--glow);transition:transform .2s}
+.more.on svg{transform:rotate(180deg)}
 .qfoot{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
 .sm{background:none;border:1px solid var(--line);color:var(--dim);border-radius:8px;padding:4px 10px;min-height:30px;font:600 12.5px "Exo 2",system-ui,sans-serif;cursor:pointer}
 .sm:active{background:rgba(58,160,255,.2)}
@@ -679,7 +690,17 @@ function buildForm(){
   $('qs').innerHTML=STATS.map(function(s){return '<option value="'+s.k+'">'+s.n+'</option>'}).join('');
 }
 var selDiff=1;
-var openQ={};
+var openQ={},doneMore=false;
+function doneRank(q){for(var i=S.hist.length-1;i>=0;i--)if(S.hist[i].t===q.t)return i;return -1}
+function doneHtml(dn){
+  var a=dn.slice().sort(function(x,y){return doneRank(y)-doneRank(x)});
+  var h=qHtml(a[0]);
+  if(a.length>1){
+    h+='<button class="more'+(doneMore?' on':'')+'" data-dm="1" aria-expanded="'+doneMore+'"><span>'+(doneMore?'Скрыть':'Ещё выполнено: '+(a.length-1))+'</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>';
+    if(doneMore)h+=a.slice(1).map(qHtml).join('');
+  }
+  return h;
+}
 function subDone(q,s){return q.daily?s.dd===today():!!s.done}
 function subCount(q){var a=q.subs||[],c=0;a.forEach(function(s){if(subDone(q,s))c++});return{c:c,n:a.length}}
 function qHtml(q){
@@ -782,7 +803,7 @@ function render(){
   if(S.penNote&&S.penNote.date===today()){pn.classList.remove('hide');pn.innerHTML='<b>Штраф за пропуск: −'+S.penNote.xp+' XP и золота</b><div class="sub" style="color:#ffb8c0">Пропущено ежедневных квестов: '+S.penNote.days+'. Уровень не падает.</div><button class="btn" data-dis="1" style="margin-top:8px">Понятно</button>'}else pn.classList.add('hide');
   var act=S.quests.filter(function(q){return !isDone(q)}),dn=S.quests.filter(isDone);
   $('active').innerHTML=act.length?act.map(qHtml).join(''):'<div class="empty">'+LBL.emptyA+'</div>';
-  $('doneList').innerHTML=dn.length?dn.map(qHtml).join(''):'<div class="empty">Пока пусто.</div>';
+  $('doneList').innerHTML=dn.length?doneHtml(dn):'<div class="empty">Пока пусто.</div>';
   var cats=LBL.cats;
   $('cats').innerHTML=cats.map(function(c){return '<button class="chip'+(c===sugCat?' on':'')+'" data-cat="'+c+'">'+c+'</button>'}).join('');
   $('sugs').innerHTML=SUG.map(function(s,i){
@@ -1088,6 +1109,7 @@ document.addEventListener('click',function(e){
   var b=e.target.closest('button');
   if(!b){if(e.target.id==='sheet')$('sheet').classList.remove('show');if(e.target.id==='nsheet')$('nsheet').classList.remove('show');if(e.target.id==='cfm')closeCfm();return}
   var D=b.dataset;
+  if(D.dm){doneMore=!doneMore;render();return}
   if(D.ex){openQ[D.ex]=!openQ[D.ex];render();return}
   if(D.sa){addSub(D.sa);return}
   if(D.sc){var psc=D.sc.split('|');toggleSub(psc[0],psc[1]);return}
@@ -1207,7 +1229,7 @@ penalties();buildForm();applyUi();render();showTab('quests');
 /* Регистрация Service Worker (файл sw.js должен лежать рядом с index.html).
    Работает только по https:// (GitHub Pages) или на localhost. */
 /* >>> При каждом обновлении меняй это число вместе с номером в sw.js (CACHE_NAME), они должны совпадать. */
-var APP_VER='v12';
+var APP_VER='v13';
 (function(){
   var p=document.getElementById('verPage');if(!p)return;
   var c=document.getElementById('verCache'),h=document.getElementById('verHint'),t=document.getElementById('toast');
