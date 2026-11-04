@@ -128,20 +128,42 @@ nav button.on{color:var(--glow);text-shadow:0 0 10px var(--glow);box-shadow:0 -2
 .normal .stage,.normal #gear,.normal .goldp,.normal .mi[data-tab=rew],.normal #pen,.normal #tab-rew{display:none!important}
 .vh{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;pointer-events:none;left:-9999px}
 label.btn{display:inline-flex;align-items:center;justify-content:center;text-align:center;-webkit-tap-highlight-color:transparent;user-select:none}
+.top{padding-bottom:4px}
+.seg.mini{width:auto;grid-template-columns:auto auto}
+.seg.mini button{padding:7px 14px;font-size:19px;line-height:1}
+nav button{font-size:10.5px;padding:7px 1px 8px}
+nav em{font-style:normal;line-height:1.1;min-height:2.2em;display:flex;align-items:center;justify-content:center;text-align:center}
+nav button span{font-size:20px}
+#fab{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+.normal nav [data-tab=rew]{display:none!important}
+.acc{background:linear-gradient(180deg,rgba(22,44,96,.6),rgba(9,18,44,.85));border:1px solid var(--line);border-radius:8px;box-shadow:0 0 16px rgba(58,160,255,.12);margin-bottom:10px}
+.acc summary{list-style:none;cursor:pointer;padding:15px 14px;display:flex;align-items:center;gap:8px;font-weight:800;font-size:16px}
+.acc summary::-webkit-details-marker{display:none}
+.acc summary::after{content:"▾";color:var(--glow);font-size:18px;transition:transform .2s;margin-left:6px}
+.acc[open] summary::after{transform:rotate(180deg)}
+.acc>div{padding:2px 14px 8px}
+.calhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;font-size:17px}
+.calhead .btn{width:46px;padding:8px 0;font-size:22px;line-height:1}
+.calgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+.calgrid.dow{margin-bottom:6px;text-align:center;font-size:12px;color:var(--dim)}
+.cd{aspect-ratio:1;border:1px solid var(--line);border-radius:8px;background:rgba(7,16,38,.6);color:var(--text);font:600 14px "Exo 2",system-ui,sans-serif;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:0}
+.cd.fut{opacity:.45}
+.cd.today{border-color:var(--glow);box-shadow:0 0 10px rgba(58,160,255,.5)}
+.cd.sel{border-color:var(--gold);background:rgba(255,207,92,.14)}
+.cd .dots{display:flex;gap:3px;height:6px}
+.dot{display:inline-block;width:6px;height:6px;border-radius:50%}
+.dot.g{background:var(--ok)}.dot.r{background:var(--red)}
+.legend{display:flex;gap:14px;align-items:center;margin-top:12px;font-size:13px;color:var(--dim);flex-wrap:wrap}
+.legend .dot{margin-right:6px}
+.legend .btn{margin-left:auto;padding:6px 14px;font-size:13px}
+.ch{margin:14px 0 6px;font-weight:800;font-size:14px;color:var(--dim)}
+.cdl{display:flex;gap:10px;align-items:center;padding:9px 10px;border-radius:8px;border:1px solid var(--line);background:rgba(7,16,38,.5);margin-bottom:6px}
+.cdl .dot{flex:none;width:9px;height:9px}
 </style>
 </head>
 <body>
-<header class="top"><div id="pagetitle">Квесты</div><button id="menuBtn" aria-label="Меню"><i></i><i></i><i></i></button></header>
-<div id="scrim"></div>
-<aside id="menu" aria-label="Меню">
-<div class="mh"><div class="mr" id="mrank">E</div><div style="min-width:0"><b id="mname"></b><div class="sub" id="mlvl"></div></div></div>
-<div class="mode"><div class="sub" style="margin-bottom:8px">Режим приложения</div><div class="seg" id="seg"><button data-mode="game" class="on">Игровая реальность</button><button data-mode="normal">Обычная реальность</button></div></div>
-<button class="mi on" data-tab="quests"><span>⚔️</span>Квесты</button>
-<button class="mi" data-tab="sug"><span>🧭</span>Задания системы</button>
-<button class="mi" data-tab="rew"><span>💎</span>Награды</button>
-<button class="mi" data-tab="notes"><span>📜</span>Заметки</button>
-<button class="mi" data-tab="hero"><span>👤</span>Герой и данные</button>
-</aside>
+<header class="top"><div id="pagetitle">Квесты</div>
+<div class="seg mini" role="group" aria-label="Режим приложения"><button data-mode="game" class="on" aria-label="Игровая реальность" title="Игровая реальность">🎮</button><button data-mode="normal" aria-label="Обычная реальность" title="Обычная реальность">🌿</button></div></header>
 <div class="wrap">
 
 <section id="tab-quests">
@@ -183,6 +205,16 @@ label.btn{display:inline-flex;align-items:center;justify-content:center;text-ali
   <div class="scroll" id="rideas"></div>
 </section>
 
+<section id="tab-cal" class="hide">
+  <div class="card">
+    <div class="calhead"><button class="btn" id="calPrev" aria-label="Предыдущий месяц">‹</button><b id="calTitle"></b><button class="btn" id="calNext" aria-label="Следующий месяц">›</button></div>
+    <div class="calgrid dow" id="calDow"></div>
+    <div class="calgrid" id="calGrid"></div>
+    <div class="legend"><span><i class="dot g"></i>выполнено</span><span><i class="dot r"></i>пропущено</span><button class="btn" id="calToday">Сегодня</button></div>
+  </div>
+  <div class="card" id="calDay"></div>
+</section>
+
 <section id="tab-notes" class="hide">
   <h2>Заметки</h2>
   <div class="card"><textarea id="nt" placeholder="Заметка, мысль, идея…"></textarea><button class="btn full" id="addN">Сохранить заметку</button></div>
@@ -190,9 +222,10 @@ label.btn{display:inline-flex;align-items:center;justify-content:center;text-ali
 </section>
 
 <section id="tab-hero" class="hide">
+  <div class="card"><div class="sub" style="margin-bottom:8px">Режим приложения</div><div class="seg" id="seg"><button data-mode="game" class="on">Игровая реальность</button><button data-mode="normal">Обычная реальность</button></div></div>
   <h2 id="h-stats">Характеристики</h2>
   <div class="card"><div class="stats" id="stats"></div></div>
-  <h2>Титулы</h2><div id="titles"></div>
+  <details class="acc" id="titlesBox"><summary><span>🏅 Титулы</span><span class="sub" id="titlesCnt" style="margin-left:auto"></span></summary><div id="titles"></div></details>
   <h2>Данные</h2>
   <div class="card">
     <b>Аналитика для Клода</b>
@@ -220,12 +253,13 @@ label.btn{display:inline-flex;align-items:center;justify-content:center;text-ali
   <div class="row"><button class="btn" id="cancelQ">Отмена</button><button class="btn" id="addQ" style="flex:1">Принять квест</button></div>
 </div></div>
 
-<nav class="hide">
-  <button data-tab="quests" class="on"><span>⚔️</span>Квесты</button>
-  <button data-tab="sug"><span>🧭</span>Советы</button>
-  <button data-tab="rew"><span>💎</span>Награды</button>
-  <button data-tab="notes"><span>📜</span>Заметки</button>
-  <button data-tab="hero"><span>👤</span>Герой</button>
+<nav>
+  <button data-tab="quests" class="on"><span>⚔️</span><em>Квесты</em></button>
+  <button data-tab="sug"><span>🧭</span><em>Задания системы</em></button>
+  <button data-tab="rew"><span>💎</span><em>Награды</em></button>
+  <button data-tab="cal"><span>📅</span><em>Календарь</em></button>
+  <button data-tab="notes"><span>📜</span><em>Заметки</em></button>
+  <button data-tab="hero"><span>👤</span><em>Герой</em></button>
 </nav>
 <div id="toast"></div>
 <div id="lvl"><div><div class="big">Уровень повышен</div><div class="big" id="lvlnum" style="font-size:84px;margin:12px 0"></div><p id="lvlrank"></p><p>Нажми, чтобы продолжить</p></div></div>
@@ -348,6 +382,9 @@ var LBLS={
 game:{tabs:{quests:'Квесты',sug:'Задания системы',rew:'Награды',notes:'Заметки',hero:'Герой и данные'},icons:{quests:'⚔️',sug:'🧭',rew:'💎',notes:'📜',hero:'👤'},sheetT:'Новый квест',addQ:'Принять квест',hSug:'Задания системы',sugP:'Посильные задания, которые легко начать. Принимай по одному-два, а не всё сразу.',hAi:'Квесты от Клода',aiP:'Выгрузи аналитику на вкладке «Герой и данные», отправь файл Клоду в чат, и он составит квесты. Ответ вставь сюда.',hStats:'Характеристики',cnt:'Квестов: ',emptyA:'Нет активных квестов. Нажми + или загляни в «Задания системы» (меню ☰).',okT:'Квест принят',errT:'Введи название квеста',aiOk:'Добавлено квестов: ',defName:'Игрок',defSt:'int',cats:['Все','ИИ','Тело','Порядок','Ум']},
 normal:{tabs:{quests:'Задачи',sug:'Идеи для дня',rew:'Награды',notes:'Заметки',hero:'Профиль и данные'},icons:{quests:'✅',sug:'🌿',rew:'💎',notes:'📜',hero:'👤'},sheetT:'Новая задача',addQ:'Добавить задачу',hSug:'Идеи для дня',sugP:'Небольшие дела, которые легко начать. Выбирай по одному-два, а не всё сразу.',hAi:'Задачи от Клода',aiP:'Выгрузи аналитику на вкладке «Профиль и данные», отправь файл Клоду в чат, и он составит задачи. Ответ вставь сюда.',hStats:'Направления',cnt:'Выполнено задач: ',emptyA:'Пока нет задач. Нажми + или загляни в «Идеи для дня» (меню ☰).',okT:'Задача добавлена',errT:'Введи название задачи',aiOk:'Добавлено задач: ',defName:'Моё имя',defSt:'mind',cats:['Все','Чтение','Спокойствие','Тело','Дом','Учёба','Творчество']}
 };
+LBLS.game.tabs.cal='Календарь';LBLS.normal.tabs.cal='Календарь';LBLS.game.icons.cal='📅';LBLS.normal.icons.cal='📅';
+LBLS.game.navs={quests:'Квесты',sug:'Задания системы',rew:'Награды',cal:'Календарь',notes:'Заметки',hero:'Герой'};
+LBLS.normal.navs={quests:'Задачи',sug:'Идеи для дня',rew:'Награды',cal:'Календарь',notes:'Заметки',hero:'Профиль'};
 var DIFFS,STATS,TITLES,SUG,LBL;
 function applyMode(){
   var n=MODE==='normal';
@@ -363,8 +400,6 @@ function ad(s,n){var a=s.split('-');return ds(new Date(+a[0],+a[1]-1,+a[2]+n))}
 function load(){try{var r=localStorage.getItem(KEYS[MODE]);if(r){var o=Object.assign(def(),JSON.parse(r));o.quests.forEach(function(q){q.created=q.created||today();q.chk=q.chk||q.created});STATS.forEach(function(x){if(typeof o.stats[x.k]!=='number')o.stats[x.k]=0});return o}}catch(e){}return def()}
 var S=load();
 function save(){try{localStorage.setItem(KEYS[MODE],JSON.stringify(S))}catch(e){}}
-function openMenu(){$('menu').classList.add('open');$('scrim').classList.add('open')}
-function closeMenu(){$('menu').classList.remove('open');$('scrim').classList.remove('open')}
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
 function need(l){return 100+25*(l-1)}
 function lv(xp){var l=1,n=need(1);while(xp>=n){xp-=n;l++;n=need(l)}return{l:l,cur:xp,need:n}}
@@ -533,7 +568,7 @@ function qHtml(q){
 }
 function render(){
   var L=lv(S.xp),r=rk(L.l),nx=RANKS.filter(function(x){return x[0]>L.l})[0];
-  $('rank').textContent=r[1];$('mrank').textContent=MODE==='normal'?L.l:r[1];$('mname').textContent=S.name;$('mlvl').textContent='Уровень '+L.l+(MODE==='normal'?'':' · золото '+S.gold);$('lvn').textContent=L.l;
+  $('rank').textContent=r[1];$('lvn').textContent=L.l;
   if(MODE==='game'){var gi=RANKS.indexOf(r);$('char').innerHTML=IMG[gi]?'<img class="cimg" src="'+IMG[gi]+'" alt="Персонаж">':charSvg(L.l);$('char').parentNode.classList.toggle('img',!!IMG[gi]);$('gear').innerHTML='<b>'+WPN[gi]+'</b> · '+ARM[gi]+' · '+HLM[gi]+(nx?'<br>Новая экипировка на уровне '+nx[0]:'');}
   var tt=TITLES.filter(function(x){return x.id===S.title})[0]||TITLES[0];
   $('ttl').textContent='«'+tt.n+'»';
@@ -561,6 +596,60 @@ function render(){
   $('notes').innerHTML=S.notes.length?S.notes.map(function(n){return '<div class="card note"><p>'+esc(n.t)+'</p><div class="q" style="border:0;padding:0"><span class="m" style="flex:1">'+esc(n.ts)+'</span><button class="del" data-n="'+n.id+'" aria-label="Удалить">✕</button></div></div>'}).join(''):'<div class="empty">Заметок пока нет.</div>';
   $('stats').innerHTML=STATS.map(function(s){return '<div class="stat"><span>'+s.n+'</span><b>'+S.stats[s.k]+'</b></div>'}).join('')+(MODE==='normal'?'<div class="stat"><span>Всего XP</span><b>'+S.xp+'</b></div><div class="stat"><span>Больших дел</span><b>'+S.bosses+'</b></div>':'<div class="stat"><span>Всего XP</span><b>'+S.xp+'</b></div><div class="stat"><span>Боссов</span><b>'+S.bosses+'</b></div><div class="stat"><span>Штрафы</span><b>−'+S.penTotal+'</b></div><div class="stat"><span>Потрачено</span><b>'+S.spent+'</b></div>');
   $('titles').innerHTML=TITLES.map(function(t){var un=S.titles.indexOf(t.id)>=0;return '<button class="tt'+(un?'':' lock')+(S.title===t.id?' cur':'')+'" '+(un?'data-t="'+t.id+'"':'disabled')+'><span>'+(un?'🏅':'🔒')+'</span><span><b>'+t.n+'</b><br><span class="sub">'+t.d+'</span></span></button>'}).join('');
+  $('titlesCnt').textContent=S.titles.length+' из '+TITLES.length;renderCal();
+}
+
+/* ---------- Календарь ---------- */
+var calY=0,calM=0,calSel='';
+function calInit(){var q=today().split('-');calY=+q[0];calM=+q[1]-1;calSel=today()}
+function cap(x){return x.charAt(0).toUpperCase()+x.slice(1)}
+function lastDone(t){for(var i=S.hist.length-1;i>=0;i--)if(S.hist[i].t===t)return S.hist[i].date;return null}
+function dayData(d){
+  var t=today(),done=S.hist.filter(function(h){return h.date===d}),dt={},miss=[],open=[];
+  done.forEach(function(h){dt[h.t]=1});
+  if(d<=t)S.quests.forEach(function(q){
+    if(q.created>d||dt[q.t])return;
+    if(q.daily){if(d>q.created||d===t)miss.push(q)}
+    else{var c=q.done?lastDone(q.t):null;if(q.done&&(!c||c<=d))return;open.push(q)}
+  });
+  return{done:done,miss:miss,open:open};
+}
+function calItem(cls,title,meta){return '<div class="cdl"><i class="dot '+cls+'"></i><div class="t">'+esc(title)+'<div class="m">'+meta+'</div></div></div>'}
+function calDayHtml(d){
+  var t=today(),pp=d.split('-'),dd=new Date(+pp[0],+pp[1]-1,+pp[2]),data=dayData(d);
+  var head=cap(dd.toLocaleDateString('ru-RU',{weekday:'long',day:'numeric',month:'long',year:'numeric'}));
+  var h='<b style="font-size:17px">'+head+'</b>'+(d===t?' <span class="xp">· сегодня</span>':'');
+  if(d>t)return h+'<div class="empty">Этот день ещё не наступил.</div>';
+  var xp=0;data.done.forEach(function(x){xp+=DIFFS[x.d].xp});
+  h+='<div class="sub" style="margin-top:2px">Выполнено: '+data.done.length+(xp?' · +'+xp+' XP':'')+'</div>';
+  if(data.done.length){
+    h+='<div class="ch">Выполнено</div>'+data.done.map(function(x){return calItem('g',x.t,'<span class="xp">+'+DIFFS[x.d].xp+' XP</span> · '+sn(x.s))}).join('');
+  }
+  var late=d<t;
+  if(data.miss.length||data.open.length){
+    h+='<div class="ch">'+(late?'Не выполнено':'Ещё не сделано')+'</div>';
+    h+=data.miss.map(function(q){return calItem('r',q.t,'ежедневная · '+sn(q.s))}).join('');
+    h+=data.open.map(function(q){return calItem('r',q.t,'разовая'+(late?', в этот день ещё была открыта':'')+' · '+sn(q.s))}).join('');
+  }
+  if(!data.done.length&&!data.miss.length&&!data.open.length)h+='<div class="empty">В этот день ничего не отмечено.</div>';
+  else if(late&&!data.miss.length&&!data.open.length)h+='<div class="empty">Пропусков не было.</div>';
+  return h;
+}
+function renderCal(){
+  if(!calY)calInit();
+  var t=today(),first=new Date(calY,calM,1),dim=new Date(calY,calM+1,0).getDate(),off=(first.getDay()+6)%7;
+  $('calTitle').textContent=cap(first.toLocaleDateString('ru-RU',{month:'long',year:'numeric'}));
+  $('calDow').innerHTML=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'].map(function(x){return '<div>'+x+'</div>'}).join('');
+  var dc={},dk={};S.hist.forEach(function(x){dc[x.date]=(dc[x.date]||0)+1;dk[x.date+'|'+x.t]=1});
+  var dl=S.quests.filter(function(q){return q.daily}),h='',i;
+  for(i=0;i<off;i++)h+='<div></div>';
+  for(var d=1;d<=dim;d++){
+    var k=calY+'-'+p2(calM+1)+'-'+p2(d),g=dc[k]>0,r=false;
+    if(k<t)r=dl.some(function(q){return q.created<k&&!dk[k+'|'+q.t]});
+    h+='<button class="cd'+(k===t?' today':'')+(k===calSel?' sel':'')+(k>t?' fut':'')+'" data-day="'+k+'" aria-label="'+d+'"><span>'+d+'</span><span class="dots">'+(g?'<i class="dot g"></i>':'')+(r?'<i class="dot r"></i>':'')+'</span></button>';
+  }
+  $('calGrid').innerHTML=h;
+  $('calDay').innerHTML=calDayHtml(calSel);
 }
 var tt_;
 function toast(t){var e=$('toast');e.textContent=t;e.classList.add('show');clearTimeout(tt_);tt_=setTimeout(function(){e.classList.remove('show')},1800)}
@@ -576,8 +665,8 @@ function complete(id){
   S.xp+=xp;S.gold+=xp;S.count++;if(q.d===3)S.bosses++;
   S.stats[q.s]=(S.stats[q.s]||0)+xp;
   var t=today();
-  S.log.push({d:t,xp:xp});if(S.log.length>600)S.log=S.log.slice(-600);
-  S.hist.push({t:q.t,s:q.s,d:q.d,date:t});if(S.hist.length>300)S.hist=S.hist.slice(-300);
+  S.log.push({d:t,xp:xp});if(S.log.length>3000)S.log=S.log.slice(-3000);
+  S.hist.push({t:q.t,s:q.s,d:q.d,date:t});if(S.hist.length>3000)S.hist=S.hist.slice(-3000);
   var got=checkTitles();
   save();render();toast('+'+xp+' XP');
   if(got.length)setTimeout(function(){toast('Новый титул: '+got[got.length-1])},1900);
@@ -649,14 +738,14 @@ function analytics(){
 
 
 function showTab(n){
-  ['quests','sug','rew','notes','hero'].forEach(function(k){$('tab-'+k).classList.toggle('hide',k!==n)});
-  document.querySelectorAll('#menu button[data-tab]').forEach(function(x){x.classList.toggle('on',x.dataset.tab===n)});
-  $('fab').classList.toggle('hide',n!=='quests');$('pagetitle').textContent=LBL.tabs[n];closeMenu();window.scrollTo(0,0);
+  ['quests','sug','rew','cal','notes','hero'].forEach(function(k){$('tab-'+k).classList.toggle('hide',k!==n)});
+  document.querySelectorAll('nav button[data-tab]').forEach(function(x){x.classList.toggle('on',x.dataset.tab===n)});
+  $('fab').classList.toggle('hide',n!=='quests');$('pagetitle').textContent=LBL.tabs[n];window.scrollTo(0,0);
 }
 function applyUi(){
   document.body.classList.toggle('normal',MODE==='normal');
-  document.querySelectorAll('#seg button').forEach(function(x){x.classList.toggle('on',x.dataset.mode===MODE)});
-  document.querySelectorAll('#menu .mi').forEach(function(x){var k=x.dataset.tab;x.innerHTML='<span>'+LBL.icons[k]+'</span>'+LBL.tabs[k]});
+  document.querySelectorAll('[data-mode]').forEach(function(x){x.classList.toggle('on',x.dataset.mode===MODE)});
+  document.querySelectorAll('nav button[data-tab]').forEach(function(x){var k=x.dataset.tab;x.innerHTML='<span>'+LBL.icons[k]+'</span><em>'+LBL.navs[k]+'</em>'});
   $('sheet-t').textContent=LBL.sheetT;$('addQ').textContent=LBL.addQ;$('h-sug').textContent=LBL.hSug;$('sug-p').textContent=LBL.sugP;
   $('h-ai').textContent=LBL.hAi;$('ai-p').textContent=LBL.aiP;$('h-stats').textContent=LBL.hStats;
   $('name').value=S.name;
@@ -665,7 +754,7 @@ function applyUi(){
 function setMode(m){
   if(m===MODE)return;
   save();MODE=m;try{localStorage.setItem('lifeRPG_mode',m)}catch(e){}
-  applyMode();S=load();penalties();selDiff=1;sugCat='Все';
+  applyMode();S=load();penalties();selDiff=1;sugCat='Все';calInit();
   buildForm();applyUi();render();showTab('quests');
   toast(m==='normal'?'Обычная реальность':'Игровая реальность');
 }
@@ -674,7 +763,7 @@ function setMode(m){
 document.addEventListener('click',function(e){
   if(e.target.closest('#lvl')){$('lvl').classList.remove('show');return}
   var b=e.target.closest('button');
-  if(!b){if(e.target.id==='sheet')$('sheet').classList.remove('show');closeMenu();return}
+  if(!b){if(e.target.id==='sheet')$('sheet').classList.remove('show');return}
   var D=b.dataset;
   if(D.mode){setMode(D.mode);return}
   if(D.tab){showTab(D.tab);return}
@@ -682,6 +771,7 @@ document.addEventListener('click',function(e){
   if(D.c){complete(D.c);return}
   if(D.dis){S.penNote=null;save();render();return}
   if(D.cat){sugCat=D.cat;render();return}
+  if(D.day){calSel=D.day;renderCal();return}
   if(D.s!==undefined){var s=SUG[+D.s];addQuest(s[1],s[2],s[3],s[4]);save();render();toast(LBL.okT);return}
   if(D.t){S.title=D.t;save();render();toast('Титул выбран');return}
   if(D.b){var w=S.rewards.filter(function(x){return x.id===D.b})[0];if(w&&S.gold>=w.c){S.gold-=w.c;S.spent+=w.c;w.n=(w.n||0)+1;save();render();toast('Награда получена: '+w.t)}return}
@@ -690,7 +780,9 @@ document.addEventListener('click',function(e){
   if(D.rx){arm(b,function(){S.rewards=S.rewards.filter(function(q){return q.id!==D.rx});save();render()});return}
   if(D.n){arm(b,function(){S.notes=S.notes.filter(function(n){return n.id!==D.n});save();render()});return}
   var id=b.id;
-  if(id==='menuBtn'){openMenu();return}
+  if(id==='calPrev'){calM--;if(calM<0){calM=11;calY--}renderCal();return}
+  if(id==='calNext'){calM++;if(calM>11){calM=0;calY++}renderCal();return}
+  if(id==='calToday'){calInit();renderCal();return}
   if(id==='fab'){$('sheet').classList.add('show');return}
   if(id==='cancelQ'){$('sheet').classList.remove('show');return}
   if(id==='addQ'){

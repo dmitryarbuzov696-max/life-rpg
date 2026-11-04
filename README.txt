@@ -16,4 +16,4 @@ Life RPG — публикация на GitHub Pages
   iPhone: открой ссылку в Safari -> «Поделиться» -> «На экран “Домой”».
   Android: открой в Chrome -> меню ⋮ -> «Установить приложение» / «Добавить на главный экран».
 
-Обновление: заменяй index.html в репозитории и увеличивай номер в sw.js (CACHE_NAME 'life-rpg-v1' -> 'life-rpg-v2').
+Обновление: заменяй index.html в репозитории и увеличивай номер в sw.js (CACHE_NAME 'life-rpg-v2' -> 'life-rpg-v3').
