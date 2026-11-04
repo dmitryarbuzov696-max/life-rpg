@@ -209,6 +209,10 @@ nav button{transition:color .15s}
 #sheet.show .in,#nsheet.show .in{animation:sheetUp .25s ease-out}
 @keyframes sheetUp{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
 @media (prefers-reduced-motion:reduce){#sheet.show .in,#nsheet.show .in{animation:none}.chk,.btn,#fab{transition:none}}
+/* ===== v5 ===== */
+.normal #streak,.normal #analBox{display:none!important}
+.nochar .stage{height:auto;margin:0 0 6px;background:none}
+.nochar .stage .rank{position:static;margin:2px auto 0}
 </style>
 </head>
 <body>
@@ -288,18 +292,16 @@ nav button{transition:color .15s}
   <div class="card"><div class="stats" id="stats"></div></div>
   <details class="acc" id="titlesBox"><summary><span>🏅 Титулы</span><span class="sub" id="titlesCnt" style="margin-left:auto"></span></summary><div id="titles"></div></details>
   <h2>Данные</h2>
-  <div class="card">
-    <b>Аналитика для Клода</b>
+  <details class="acc" id="analBox"><summary><span>📊 Аналитика</span></summary><div>
     <p class="sub" style="margin:6px 0 10px">Сохрани файл и отправь его мне в чат со словами «составь новые <span id="an-w">квесты</span>». Я посмотрю, что тебе даётся, а что нет.</p>
-    <button class="btn full gold" id="expA">Выгрузить аналитику</button>
-  </div>
+    <button class="btn full gold" id="expA" style="margin-bottom:8px">Выгрузить аналитику</button>
+  </div></details>
   <div class="card">
     <b>Резервная копия и импорт</b>
     <p class="sub" style="margin:6px 0 10px">Прогресс хранится в памяти телефона. Сохрани копию файлом и при смене телефона или очистке данных восстанови её. Кнопка импорта принимает и копию прогресса, и файл с квестами от Клода (JSON).</p>
     <div class="row"><button class="btn" id="expB">Сохранить копию</button><label class="btn" for="impFile" id="impLbl" role="button" tabindex="0">Импортировать из файла</label></div>
     <!-- Скрытый input: НЕ display:none, а «невидимый» (так надёжнее открывается файловый менеджер на iOS и Android) -->
     <input type="file" id="impFile" class="vh" accept=".json,application/json,text/plain">
-    <button class="btn full del" id="reset" style="border:1px solid var(--line)">Сбросить прогресс этого режима</button>
   </div>
 </section>
 </div>
@@ -506,6 +508,7 @@ function penalties(){
 }
 
 /* character */
+var SHOW_CHAR=false; /* персонаж скрыт; вернуть: SHOW_CHAR=true */
 var IMG={}; /* картинки героев вырезаны (вернуть: IMG={0:"data:image/...",1:"...",2:"..."}) */
 
 var WPN=['Деревянная палка','Кинжал','Стальной меч','Клинок охотника','Тёмный клинок','Клинок теней','Клинок теней','Клинок монарха'];
@@ -639,7 +642,7 @@ function qHtml(q){
 function render(){
   var L=lv(S.xp),r=rk(L.l),nx=RANKS.filter(function(x){return x[0]>L.l})[0];
   $('rank').textContent=r[1];$('lvn').textContent=L.l;
-  if(MODE==='game'){var gi=RANKS.indexOf(r);$('char').innerHTML=IMG[gi]?'<img class="cimg" src="'+IMG[gi]+'" alt="Персонаж">':charSvg(L.l);$('char').parentNode.classList.toggle('img',!!IMG[gi]);$('gear').innerHTML='<b>'+WPN[gi]+'</b> · '+ARM[gi]+' · '+HLM[gi]+(nx?'<br>Новая экипировка на уровне '+nx[0]:'');}
+  if(MODE==='game'&&SHOW_CHAR){var gi=RANKS.indexOf(r);$('char').innerHTML=IMG[gi]?'<img class="cimg" src="'+IMG[gi]+'" alt="Персонаж">':charSvg(L.l);$('char').parentNode.classList.toggle('img',!!IMG[gi]);$('gear').innerHTML='<b>'+WPN[gi]+'</b> · '+ARM[gi]+' · '+HLM[gi]+(nx?'<br>Новая экипировка на уровне '+nx[0]:'');}
   var tt=TITLES.filter(function(x){return x.id===S.title})[0]||TITLES[0];
   $('ttl').textContent=MODE==='normal'?'':'«'+tt.n+'»';
   $('lvltxt').textContent=MODE==='normal'?'':'Уровень '+L.l+' · '+r[2];
@@ -648,7 +651,7 @@ function render(){
   $('nextrank').textContent=MODE==='normal'?('До уровня '+(L.l+1)+': '+(L.need-L.cur)+' XP'):(nx?('Ранг '+nx[1]+' с уровня '+nx[0]):'Максимальный ранг');
   $('gold').textContent=S.gold;$('gold2').textContent=S.gold;
   var st=streak();$('streak').textContent='Серия: '+st+' дн.';
-  $('cnt').textContent=LBL.cnt+S.count;
+  $('cnt').textContent=MODE==='normal'?LBL.cnt+S.quests.filter(isDone).length+' (всего '+S.count+')':LBL.cnt+S.count;
   var pn=$('pen');
   if(S.penNote&&S.penNote.date===today()){pn.classList.remove('hide');pn.innerHTML='<b>Штраф за пропуск: −'+S.penNote.xp+' XP и золота</b><div class="sub" style="color:#ffb8c0">Пропущено ежедневных квестов: '+S.penNote.days+'. Уровень не падает.</div><button class="btn" data-dis="1" style="margin-top:8px">Понятно</button>'}else pn.classList.add('hide');
   var act=S.quests.filter(function(q){return !isDone(q)}),dn=S.quests.filter(isDone);
@@ -936,7 +939,7 @@ function showTab(n){
   $('fab').classList.toggle('hide',n!=='quests'&&n!=='notes');$('fab').setAttribute('aria-label',n==='notes'?'Новая заметка':(MODE==='normal'?'Новая задача':'Новый квест'));$('pagetitle').textContent=LBL.tabs[n];window.scrollTo(0,0);
 }
 function applyUi(){
-  document.body.classList.toggle('normal',MODE==='normal');
+  document.body.classList.toggle('normal',MODE==='normal');document.body.classList.toggle('nochar',!SHOW_CHAR);
   document.querySelectorAll('[data-mode]').forEach(function(x){x.classList.toggle('on',x.dataset.mode===MODE)});
   document.querySelectorAll('nav button[data-tab]').forEach(function(x){var k=x.dataset.tab;x.innerHTML='<span>'+LBL.icons[k]+'</span><em>'+LBL.navs[k]+'</em>'});
   $('sheet-t').textContent=LBL.sheetT;$('addQ').textContent=LBL.addQ;$('h-sug').textContent=LBL.hSug;$('sug-p').textContent=LBL.sugP;
@@ -1023,7 +1026,6 @@ document.addEventListener('click',function(e){
   }
   if(id==='expA'){saveFile(MODE==='normal'?'life-analytics-normal.json':'life-rpg-analytics.json',JSON.stringify(analytics(),null,2));return}
   if(id==='expB'){saveFile(MODE==='normal'?'life-backup-normal.json':'life-rpg-backup.json',JSON.stringify({app:'life-rpg',version:1,mode:MODE,exported:today(),data:S}));return}
-  if(id==='reset'){arm(b,function(){S=def();save();$('name').value=S.name;render();b.textContent='Сбросить прогресс этого режима';toast('Прогресс сброшен')});return}
 });
 
 /* ---------- Импорт из файла ---------- */
