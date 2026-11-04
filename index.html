@@ -491,24 +491,21 @@ function renderNotesCal(){
   var t=today(),first=new Date(ncY,ncM,1),dim=new Date(ncY,ncM+1,0).getDate(),off=(first.getDay()+6)%7;
   $('ncTitle').textContent=cap(first.toLocaleDateString('ru-RU',{month:'long',year:'numeric'}));
   $('ncDow').innerHTML=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'].map(function(x){return '<div>'+x+'</div>'}).join('');
-  var cnt={};S.notes.forEach(function(n){cnt[n.d]=(cnt[n.d]||0)+1});
-  var h='',mt=0,i,pre=ncY+'-'+p2(ncM+1)+'-';
+    var h='',mt=0,i,pre=ncY+'-'+p2(ncM+1)+'-';
   for(i=0;i<off;i++)h+='<div></div>';
   for(var d=1;d<=dim;d++){
-    var k=pre+p2(d),c=cnt[k]||0,dots='',mk=marksOn(k),st='';mt+=c;
-    for(var j=0;j<Math.min(c,3);j++)dots+='<i class="dot n"></i>';
+    var k=pre+p2(d),dots='',mk=marksOn(k),st='';mt+=mk.length;
     if(mk.length){dots+='<i class="dot" style="background:'+mk[0].col+'"></i>';st=' style="background:'+mk[0].col+'4d'+(k===ncSel?'':';border-color:'+mk[0].col)+'"'}
-    h+='<button class="cd'+(k===t?' today':'')+(k===ncSel?' sel':'')+'" data-nday="'+k+'"'+st+' aria-label="'+d+(c?', заметок: '+c:'')+'"><span>'+d+'</span><span class="dots">'+dots+'</span></button>';
+    h+='<button class="cd'+(k===t?' today':'')+(k===ncSel?' sel':'')+'" data-nday="'+k+'"'+st+' aria-label="'+d+(mk.length?', '+esc(mk.map(function(m){return m.t}).join(', ')):'')+'"><span>'+d+'</span><span class="dots">'+dots+'</span></button>';
   }
   $('ncGrid').innerHTML=h;
-  $('ncInfo').textContent='заметок в месяце: '+mt;
-  var day=S.notes.filter(function(n){return n.d===ncSel}).sort(function(a,b){return (a.c||0)-(b.c||0)});
-  var hh='<div class="nday-h"><b style="font-size:17px">'+esc(fmtDay(ncSel))+'</b><span class="sub">'+(day.length?'заметок: '+day.length:'')+'</span></div>';
+  $('ncInfo').textContent='отметок в месяце: '+mt;
+  var mks=marksOn(ncSel);
+  var hh='<div class="nday-h"><b style="font-size:17px">'+esc(fmtDay(ncSel))+'</b><span class="sub">'+(mks.length?'отметок: '+mks.length:'')+'</span></div>';
   var pp=ncSel.split('-');
   hh+='<div class="sub" style="margin:-4px 0 10px">'+cap(new Date(+pp[0],+pp[1]-1,+pp[2]).toLocaleDateString('ru-RU',{weekday:'long',day:'numeric',month:'long',year:'numeric'}))+'</div>';
-  marksOn(ncSel).forEach(function(m){hh+='<div class="cdl" style="border-left:4px solid '+m.col+'"><i class="dot" style="background:'+m.col+'"></i><div class="t">'+esc(m.t||'Отметка')+'<div class="m">'+(m.yr?'Ежегодно'+(m.d!==ncSel?' · с '+m.d.slice(0,4):''):'Один раз')+'</div></div><button class="nb" data-me="'+esc(m.id)+'" aria-label="Редактировать" title="Редактировать">✎</button><button class="del" data-mx="'+esc(m.id)+'" aria-label="Удалить">✕</button></div>'});
-  hh+=day.length?day.map(function(n){return nHtml(n,false)}).join(''):'<div class="empty">В этот день заметок нет.</div>';
-  hh+='<button class="btn full" data-nadd="1">+ Заметка на этот день</button><button class="btn full" data-madd="1" style="margin-top:8px">🎨 Отметить дату / событие</button>';
+  mks.forEach(function(m){hh+='<div class="cdl" style="border-left:4px solid '+m.col+'"><i class="dot" style="background:'+m.col+'"></i><div class="t">'+esc(m.t||'Отметка')+'<div class="m">'+(m.yr?'Ежегодно'+(m.d!==ncSel?' · с '+m.d.slice(0,4):''):'Один раз')+'</div></div><button class="nb" data-me="'+esc(m.id)+'" aria-label="Редактировать" title="Редактировать">✎</button><button class="del" data-mx="'+esc(m.id)+'" aria-label="Удалить">✕</button></div>'});
+  if(!mks.length)hh+='<div class="empty">В этот день отметок нет. Нажми +, чтобы добавить.</div>';
   $('ncDay').innerHTML=hh;
 }
 function renderNotes(){
@@ -562,16 +559,15 @@ function calDayHtml(d){
   var t=today(),pp=d.split('-'),dd=new Date(+pp[0],+pp[1]-1,+pp[2]),data=dayData(d);
   var head=cap(dd.toLocaleDateString('ru-RU',{weekday:'long',day:'numeric',month:'long',year:'numeric'}));
   var h='<b style="font-size:17px">'+head+'</b>'+(d===t?' <span class="xp">· сегодня</span>':'');
-  var addBtn='<button class="btn full" data-qadd="1" style="margin-top:12px">+ Задача на этот день</button>';
   if(d>t){
     var sc=S.quests.filter(function(q){return q.due===d&&!isDone(q)});
     h+='<div class="sub" style="margin-top:2px">Запланировано: '+sc.length+'</div>';
     h+=sc.length?sc.map(function(q){return '<div class="cdl"><i class="dot s"></i><div class="t">'+esc(q.t)+'<div class="m">'+(q.daily?'ежедневная, с этого дня':'запланирована')+'</div></div><button class="del" data-x="'+q.id+'" aria-label="Удалить задачу">✕</button></div>'}).join(''):'<div class="empty">На этот день задач нет.</div>';
-    return h+addBtn;
+    return h;
   }
   if(d===t){
     var na=S.quests.filter(function(q){return !isDone(q)&&!isFuture(q)}).length;
-    return h+'<div class="sub" style="margin-top:2px">Активных: '+na+' · выполнено сегодня: '+data.done.length+'</div>'+addBtn;
+    return h+'<div class="sub" style="margin-top:2px">Активных: '+na+' · выполнено сегодня: '+data.done.length+'</div>';
   }
 
   h+='<div class="sub" style="margin-top:2px">Выполнено: '+data.done.length+'</div>';
@@ -686,7 +682,7 @@ document.addEventListener('click',function(e){
   if(D.sx){var psx=D.sx.split('|');arm(b,function(){delSub(psx[0],psx[1])});return}
   if(D.un){askUndo(D.un);return}
   if(D.dd){askDelDone(D.dd);return}
-  if(D.nv){nView=D.nv;renderNotes();return}
+  if(D.nv){nView=D.nv;$('fab').setAttribute('aria-label',nView==='cal'?'Новая отметка':'Новая заметка');renderNotes();return}
   if(D.nday){ncSel=D.nday;renderNotes();return}
   if(D.nadd){openNote(null);return}
   if(D.madd){openMark(null,ncSel);return}
@@ -711,7 +707,7 @@ document.addEventListener('click',function(e){
   if(id==='cancelN'){$('nsheet').classList.remove('show');return}
   if(id==='cfmNo'){closeCfm();return}
   if(id==='cfmYes'){var cf=cfmFn;closeCfm();if(cf)cf();return}
-  if(id==='fab'){if(curTab==='notes')openNote(null);else openQuestSheet(null);return}
+  if(id==='fab'){if(curTab==='notes'){if(nView==='cal')openMark(null,ncSel);else openNote(null)}else openQuestSheet(calSel);return}
   if(id==='calToggle'){var hid=$('calBox').classList.toggle('hide');b.setAttribute('aria-expanded',hid?'false':'true');$('calArr').textContent=hid?'▾':'▴';return}
   if(id==='cancelM'){$('msheet').classList.remove('show');return}
   if(id==='addM'){
@@ -798,7 +794,8 @@ applyUi();render();showTab('quests');
 /* Регистрация Service Worker (файл sw.js должен лежать рядом с index.html).
    Работает только по https:// (GitHub Pages) или на localhost. */
 /* >>> При каждом обновлении меняй это число вместе с номером в sw.js (CACHE_NAME), они должны совпадать. */
-var APP_VER='v15';
+/* при каждом обновлении меняй это число вместе с CACHE_NAME в sw.js (должны совпадать) */
+var APP_VER='v18';
 (function(){
   var p=document.getElementById('verPage');if(!p)return;
   var c=document.getElementById('verCache'),h=document.getElementById('verHint'),t=document.getElementById('toast');
