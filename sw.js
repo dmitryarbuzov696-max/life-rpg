@@ -6,9 +6,9 @@
   ВАЖНО: когда меняешь index.html и выкладываешь заново, увеличь номер в CACHE_NAME
   (v1 -> v2 -> v3), иначе телефон может ещё какое-то время показывать старую версию.
 */
-/* >>> ПРИ КАЖДОМ ОБНОВЛЕНИИ САЙТА ПРИБАВЛЯЙ К НОМЕРУ ОДНУ ЦИФРУ (v6 -> v7 -> v8 ...).
+/* >>> ПРИ КАЖДОМ ОБНОВЛЕНИИ САЙТА ПРИБАВЛЯЙ К НОМЕРУ ОДНУ ЦИФРУ (v14 -> v15 -> v16 ...).
    Иначе телефон может ещё долго показывать старую версию из кэша. Меняется только число в строке ниже. */
-var CACHE_NAME = 'life-rpg-v13';
+var CACHE_NAME = 'life-rpg-v14';
 var ASSETS = [
   './',
   './index.html',
@@ -39,7 +39,8 @@ self.addEventListener('activate', function (e) {
   e.waitUntil(
     caches.keys()
       .then(function (keys) {
-        return Promise.all(keys.filter(function (k) { return k !== CACHE_NAME; })
+        /* удаляем только наши кэши старых версий (префикс life-rpg-), чужие не трогаем */
+        return Promise.all(keys.filter(function (k) { return k.indexOf('life-rpg-') === 0 && k !== CACHE_NAME; })
           .map(function (k) { return caches.delete(k); }));
       })
       .then(function () { return self.clients.claim(); })
