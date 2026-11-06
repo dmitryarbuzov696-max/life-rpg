@@ -251,8 +251,8 @@ nav button{transition:color .15s}
 <div class="wrap">
 
 <section id="tab-quests">
-  <button class="btn full calbtn" id="calToggle" aria-expanded="false"><span>📅 Календарь</span><span id="calArr">▾</span></button>
-  <div id="calBox" class="hide">
+  <button class="btn full calbtn" id="calToggle" aria-expanded="true"><span>📅 Календарь</span><span id="calArr">▴</span></button>
+  <div id="calBox">
   <div class="card">
     <div class="calhead"><button class="btn" id="calPrev" aria-label="Предыдущий месяц">‹</button><button class="btn calttl" id="calTitle" aria-label="Выбрать месяц и год"></button><button class="btn" id="calNext" aria-label="Следующий месяц">›</button></div>
     <div class="calpick hide" id="calPick"><select id="calMs" aria-label="Месяц"></select><select id="calYs" aria-label="Год"></select></div>
@@ -286,6 +286,12 @@ nav button{transition:color .15s}
 </section>
 
 <section id="tab-prof" class="hide">
+  <h2>Облако</h2>
+  <details class="acc" id="cloudBox"><summary><span>☁️ Облако (вход через Google)</span></summary><div>
+    <p class="sub" id="cloudSt" style="margin:6px 0 10px">Вход не выполнен. Приложение работает как раньше, данные хранятся на этом устройстве.</p>
+    <div class="row"><button class="btn" id="cloudIn">Войти через Google</button><button class="btn hide" id="cloudNow">Синхронизировать</button><button class="btn hide" id="cloudOut">Выйти</button></div>
+    <div class="row hide" id="cloudCf" style="margin-top:8px"><button class="btn" id="cloudPull">⬇ Взять из облака</button><button class="btn" id="cloudPush">⬆ Отправить в облако</button></div>
+  </div></details>
   <h2>Данные</h2>
   <details class="acc" id="dataBox"><summary><span>💾 Резервная копия и импорт</span></summary><div>
     <b>Резервная копия и импорт</b>
@@ -364,7 +370,7 @@ function today(){return ds(new Date())}
 function ad(s,n){var a=s.split('-');return ds(new Date(+a[0],+a[1]-1,+a[2]+n))}
 function load(){try{var r=localStorage.getItem(KEY);if(r){var o=Object.assign(def(),JSON.parse(r));['quests','notes','marks','log','hist','rewards','titles'].forEach(function(k){if(!Array.isArray(o[k]))o[k]=[]});if(!o.stats||typeof o.stats!=='object')o.stats={};o.quests.forEach(function(q){q.created=q.created||today();q.chk=q.chk||q.created});STAT_KEYS.forEach(function(k){if(typeof o.stats[k]!=='number')o.stats[k]=0});o.notes.forEach(fixNote);o.marks=o.marks.filter(fixMark);return o}}catch(e){}return def()}
 var S=load();
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}try{if(window.LRonSave)window.LRonSave()}catch(e){}}
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
 function $(id){return document.getElementById(id)}
@@ -595,6 +601,7 @@ function openNote(id){
 
 /* ---------- Календарь ---------- */
 var calY=0,calM=0,calSel='';
+function calUi(){var h=!!S.calHide;$('calBox').classList.toggle('hide',h);$('calToggle').setAttribute('aria-expanded',h?'false':'true');$('calArr').textContent=h?'▾':'▴'}
 function calInit(){var q=today().split('-');calY=+q[0];calM=+q[1]-1;calSel=today()}
 function cap(x){return x.charAt(0).toUpperCase()+x.slice(1)}
 function lastDone(t){for(var i=S.hist.length-1;i>=0;i--)if(S.hist[i].t===t)return S.hist[i].date;return null}
@@ -727,7 +734,7 @@ function showTab(n){
   document.querySelectorAll('nav button[data-tab]').forEach(function(x){x.classList.toggle('on',x.dataset.tab===n)});
   $('fab').classList.toggle('hide',n!=='quests'&&n!=='notes');$('fab').setAttribute('aria-label',n==='notes'?'Новая заметка':'Новая задача');$('pagetitle').textContent=TABS[n];window.scrollTo(0,0);
 }
-function applyUi(){
+function applyUi(){calUi();
   document.title='Daily Planner';
 }
 
@@ -770,7 +777,7 @@ document.addEventListener('click',function(e){
   if(id==='cfmNo'){closeCfm();return}
   if(id==='cfmYes'){var cf=cfmFn;closeCfm();if(cf)cf();return}
   if(id==='fab'){if(curTab==='notes'){if(nView==='cal')openMark(null,ncSel);else openNote(null)}else openQuestSheet(calSel);return}
-  if(id==='calToggle'){var hid=$('calBox').classList.toggle('hide');b.setAttribute('aria-expanded',hid?'false':'true');$('calArr').textContent=hid?'▾':'▴';syncLists();return}
+  if(id==='calToggle'){var hid=$('calBox').classList.toggle('hide');b.setAttribute('aria-expanded',hid?'false':'true');$('calArr').textContent=hid?'▾':'▴';S.calHide=hid;save();syncLists();return}
   if(id==='cancelM'){$('msheet').classList.remove('show');return}
   if(id==='addM'){
     var mt=$('mt').value.trim(),md=$('md').value;
@@ -836,10 +843,12 @@ function importData(o){
   var hasN=('read' in k)||('calm' in k)||('body' in k)||('home' in k)||('mind' in k)||('art' in k);
   var hasG=('str' in k)||('int' in k)||('end' in k)||('spi' in k);
   if((mode!==null&&mode!=='normal')||(mode===null&&hasG&&!hasN))reject('Эта копия создана в другой версии приложения и не подходит. Данные не изменены.');
-  localStorage.setItem(KEY,JSON.stringify(data));
-  S=load();calInit();ncInit();nQ='';$('nsearch').value='';applyUi();render();
+  var oc=S.cloud;localStorage.setItem(KEY,JSON.stringify(data));
+  S=load();calInit();ncInit();nQ='';$('nsearch').value='';applyUi();render();if(oc){S.cloud=oc;save()}
   return 'Данные импортированы'
 }
+/* ---------- Мост для облака (см. модуль Firebase внизу) ---------- */
+window.LR={get:function(){return S},apply:function(d){localStorage.setItem(KEY,JSON.stringify(d));S=load();calInit();ncInit();nQ='';$('nsearch').value='';applyUi();render()},setMeta:function(m){S.cloud=m;try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}},ask:ask,toast:toast};
 $('impFile').addEventListener('change',function(){
   var inp=this,f=inp.files&&inp.files[0];if(!f)return;
   var r=new FileReader();
@@ -865,7 +874,7 @@ applyUi();render();showTab('quests');
    Работает только по https:// (GitHub Pages) или на localhost. */
 /* >>> При каждом обновлении меняй это число вместе с номером в sw.js (CACHE_NAME), они должны совпадать. */
 /* при каждом обновлении меняй это число вместе с CACHE_NAME в sw.js (должны совпадать) */
-var APP_VER='v28';
+var APP_VER='v30';
 (function(){
   var p=document.getElementById('verPage');if(!p)return;
   var c=document.getElementById('verCache'),h=document.getElementById('verHint'),t=document.getElementById('toast');
@@ -901,6 +910,139 @@ if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol)){
     }).catch(function(){});
   });
 }
+</script>
+<script type="module">
+/* ОБЛАКО (Firebase). Необязательное: без входа приложение работает как раньше. Локальные данные (localStorage 'lifeRPG_normal_v1') остаются основой.
+   Облако: users/{uid}, один документ {json,t,ver}. Метаданные связи лежат в S.cloud={uid,t,h} (внутри того же ключа, в облако не уходят). */
+const U='https://www.gstatic.com/firebasejs/13.2.0/';
+const CFG={apiKey:"AIzaSyAZ8wDIgDOnKKf5GdyM0X7LxeKFgQOO3_4",authDomain:"daily-planner-c886a.firebaseapp.com",projectId:"daily-planner-c886a",storageBucket:"daily-planner-c886a.firebasestorage.app",messagingSenderId:"1068482782285",appId:"1:1068482782285:web:3bc7fd3941e03db3bb2804"};
+const MAXLEN=400000, DELAY=4000, OFFMSG='Нет связи с облаком. Данные сохранены на устройстве, отправлю позже.';
+const $=id=>document.getElementById(id), LR=window.LR;
+let fb=null,auth=null,db=null,user=null,timer=null,working=false,paused=false,lastSync=0,loading=null,manual=false;
+const strip=s=>{const o=Object.assign({},s);delete o.cloud;return JSON.stringify(o)};
+const hash=s=>{let h=5381;for(let i=0;i<s.length;i++)h=((h<<5)+h+s.charCodeAt(i))|0;return h+':'+s.length};
+const pristine=s=>!(s.quests||[]).length&&!(s.notes||[]).length&&!(s.marks||[]).length&&!(s.log||[]).length;
+const sum=d=>d?('задач '+(d.quests||[]).length+', заметок '+(d.notes||[]).length+', отметок '+(d.marks||[]).length):'не прочитать';
+const when=t=>new Date(t).toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+function st(t){const e=$('cloudSt');if(e)e.textContent=t}
+function show(){const on=!!user;$('cloudIn').classList.toggle('hide',on);$('cloudNow').classList.toggle('hide',!on);$('cloudOut').classList.toggle('hide',!on);$('cloudCf').classList.toggle('hide',!(on&&paused))}
+function ok(){if(manual){manual=false;LR.toast('Синхронизация успешна')}st('Вход: '+user.email+'. Синхронизировано '+when(Date.now())+'.')}
+const ref=()=>fb.fs.doc(db,'users',user.uid);
+
+async function init(){
+  if(fb)return fb;
+  if(!loading)loading=(async()=>{
+    const [a,au,fs]=await Promise.all([import(U+'firebase-app.js'),import(U+'firebase-auth.js'),import(U+'firebase-firestore.js')]);
+    const app=a.initializeApp(CFG);auth=au.getAuth(app);db=fs.getFirestore(app);fb={au,fs};
+    au.onAuthStateChanged(auth,u=>{user=u;paused=false;show();if(u){st('Вход: '+u.email+'. Проверяю облако…');sync()}else st('Вход не выполнен. Данные хранятся на этом устройстве.')});
+    au.getRedirectResult(auth).catch(()=>{});
+    return fb;
+  })();
+  try{return await loading}catch(e){loading=null;throw e}
+}
+
+function take(r){
+  const d=JSON.parse(r.json);
+  if(!d||typeof d.xp!=='number'||!Array.isArray(d.quests))throw new Error('format');
+  d.cloud={uid:user.uid,t:r.t,h:''};
+  LR.apply(d);
+  LR.setMeta({uid:user.uid,t:r.t,h:hash(strip(LR.get()))});
+  ok();
+}
+
+async function doPush(over){
+  const s=LR.get(),m=s.cloud;
+  if(!user||!m||m.uid!==user.uid)return;
+  const j=strip(s),h=hash(j);
+  if(!over&&h===m.h)return;
+  if(j.length>MAXLEN){st('Данных слишком много для облака (лимит ~400 тыс. символов).');return}
+  const now=Date.now(),R=ref();
+  try{
+    await fb.fs.runTransaction(db,async tx=>{
+      const sn=await tx.get(R),rt=sn.exists()?(sn.data().t||0):0;
+      if(!over&&rt!==(m.t||0)){const e=new Error('conflict');e.conflict=true;throw e}
+      tx.set(R,{json:j,t:now,ver:1});
+    });
+  }catch(e){if(e&&e.conflict)return 'conflict';throw e}
+  LR.setMeta({uid:user.uid,t:now,h:h});
+  ok();
+}
+
+async function sync(){
+  if(!user||working)return;
+  working=true;let again=false;
+  try{
+    const sn=await fb.fs.getDoc(ref());lastSync=Date.now();
+    const s=LR.get(),j=strip(s),h=hash(j),m=s.cloud,linked=!!(m&&m.uid===user.uid);
+    if(!sn.exists()){LR.setMeta({uid:user.uid,t:0,h:''});paused=false;if(await doPush(false)==='conflict')again=true;return}
+    const r=sn.data();
+    if(linked&&m.t===r.t){paused=false;if(h!==m.h){if(await doPush(false)==='conflict')again=true}else ok();return}
+    if(r.json===j){LR.setMeta({uid:user.uid,t:r.t,h:h});paused=false;ok();return}
+    if((linked&&h===m.h)||pristine(s)){take(r);paused=false;LR.toast('Данные обновлены из облака');return}
+    manual=false;paused=true;show();
+    st('Данные на устройстве и в облаке отличаются. Выбери, какие оставить (кнопки ниже). Пока выбор не сделан, ничего не синхронизируется.');
+    let rd=null;try{rd=JSON.parse(r.json)}catch(e){}
+    LR.ask('Данные отличаются','На устройстве: '+sum(s)+'.\nВ облаке: '+sum(rd)+' (сохранено '+when(r.t)+').\n\nОтмена: ничего не менять, решить позже в Профиль → Облако. Если берёшь облако, данные здесь будут заменены; сначала можно сохранить копию (Профиль → Данные).','Взять из облака',pull,true);
+  }catch(e){st(OFFMSG+' ['+((e&&e.code)||(e&&e.message)||'')+']')}
+  finally{working=false;show();if(again)sync();else if(manual){manual=false;LR.toast('Синхронизация не удалась',3000)}}
+}
+
+async function pull(){
+  if(!user)return;
+  try{
+    const sn=await fb.fs.getDoc(ref());
+    if(!sn.exists()){LR.toast('В облаке пока пусто');return}
+    take(sn.data());paused=false;show();LR.toast('Данные взяты из облака');
+  }catch(e){st(OFFMSG+' ['+((e&&e.code)||(e&&e.message)||'')+']')}
+}
+async function pushOver(){
+  if(!user)return;
+  try{
+    const m=LR.get().cloud;if(!m||m.uid!==user.uid)LR.setMeta({uid:user.uid,t:0,h:''});
+    await doPush(true);paused=false;show();LR.toast('Облако обновлено');
+  }catch(e){st(OFFMSG+' ['+((e&&e.code)||(e&&e.message)||'')+']')}
+}
+
+async function flush(){
+  if(!user||paused)return;
+  if(working){timer=setTimeout(flush,2000);return}
+  working=true;let c;
+  try{c=await doPush(false)}catch(e){st(OFFMSG+' ['+((e&&e.code)||(e&&e.message)||'')+']')}finally{working=false}
+  if(c==='conflict')sync();
+}
+window.LRonSave=function(){
+  if(!user||paused)return;
+  const m=LR.get().cloud;if(!m||m.uid!==user.uid)return;
+  clearTimeout(timer);timer=setTimeout(flush,DELAY);
+};
+
+$('cloudIn').onclick=async()=>{
+  try{
+    st('Открываю вход Google…');await init();
+    const p=new fb.au.GoogleAuthProvider();
+    try{await fb.au.signInWithPopup(auth,p)}
+    catch(e){
+      const c=e&&e.code;
+      if(c==='auth/popup-blocked'||c==='auth/operation-not-supported-in-this-environment')await fb.au.signInWithRedirect(auth,p);
+      else if(c==='auth/popup-closed-by-user'||c==='auth/cancelled-popup-request')st('Вход отменён.');
+      else throw e;
+    }
+  }catch(e){st('Не удалось войти (нужен интернет). '+((e&&e.code)||''))}
+};
+$('cloudOut').onclick=async()=>{try{await fb.au.signOut(auth)}catch(e){}};
+$('cloudNow').onclick=()=>{lastSync=0;manual=true;sync()};
+$('cloudPull').onclick=()=>LR.ask('Взять данные из облака?','Данные на этом устройстве будут заменены облачными. Если сомневаешься, отмени и сначала сохрани копию (Профиль → Данные).','Заменить',pull,true);
+$('cloudPush').onclick=()=>LR.ask('Заменить облако данными с этого устройства?','Данные в облаке будут перезаписаны теми, что на этом устройстве.','Заменить облако',pushOver,true);
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden){if(timer){clearTimeout(timer);flush()}}
+  else if(user&&Date.now()-lastSync>1800000)sync();
+});
+window.addEventListener('online',()=>{
+  if(user){flush()}
+  else{const m=LR.get().cloud;if(m&&m.uid)init().catch(()=>{})}
+});
+/* Если на этом устройстве уже был вход: подключаем SDK сразу. Иначе SDK не грузится вообще (до нажатия «Войти»). */
+{const m=LR.get().cloud;if(m&&m.uid)init().catch(()=>st('Облако недоступно (нет сети). Данные сохранены на устройстве.'))}
 </script>
 </body>
 </html>
