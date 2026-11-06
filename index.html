@@ -138,6 +138,7 @@ nav button span{font-size:20px}
 #tab-quests .cd{aspect-ratio:1.15}
 .calhead .btn.calttl{width:auto;flex:1;margin:0 8px;padding:8px 6px;font-size:16px;font-weight:800;line-height:1.2}
 .calpick{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px}
+.cdl.wr{flex-wrap:wrap}
 .cdl .del{flex:none;padding:4px;min-width:36px;min-height:36px}
 
 /* ---- заметки ---- */
@@ -311,7 +312,10 @@ nav button{transition:color .15s}
   <label class="sub" for="qdate" style="display:block;margin:2px 0 4px">Дата задачи (в этот день она появится в активных)</label>
   <input type="date" id="qdate">
   <label class="c2"><input type="checkbox" id="qd"> Повторять каждый день</label>
-  <div class="row"><button class="btn" id="cancelQ">Отмена</button><button class="btn" id="addQ" style="flex:1">Добавить задачу</button></div>
+  <div class="sub" style="margin:8px 0 4px">Подзадачи (необязательно)</div>
+  <div id="qsubs"></div>
+  <div class="sadd"><input type="text" id="qsi" placeholder="Добавить подзадачу" maxlength="120" aria-label="Добавить подзадачу"><button class="btn" id="qsa" type="button">Добавить</button></div>
+  <div class="row" style="margin-top:14px"><button class="btn" id="cancelQ">Отмена</button><button class="btn" id="addQ" style="flex:1">Добавить задачу</button></div>
 </div></div>
 
 <div id="nsheet"><div class="in">
@@ -386,18 +390,19 @@ function doneHtml(dn){
 }
 function subDone(q,s){return q.daily?s.dd===today():!!s.done}
 function subCount(q){var a=q.subs||[],c=0;a.forEach(function(s){if(subDone(q,s))c++});return{c:c,n:a.length}}
+function qPanel(q,dn){
+  return '<div class="qsub">'+(q.subs||[]).map(function(s){
+      var sd=subDone(q,s);
+      return '<div class="sb'+(sd?' sdone':'')+'"><button class="sbc" data-sc="'+q.id+'|'+s.id+'" aria-label="Отметить подзадачу"'+(dn?' disabled':'')+'>'+(sd?'✓':'')+'</button><span class="sbt">'+esc(s.t)+'</span>'+(dn?'':'<button class="del" data-sx="'+q.id+'|'+s.id+'" aria-label="Удалить подзадачу">✕</button>')+'</div>';
+    }).join('')+(dn?'':'<div class="sadd"><input type="text" data-si="'+q.id+'" placeholder="Добавить подзадачу" maxlength="120" aria-label="Добавить подзадачу"><button class="btn" data-sa="'+q.id+'">Добавить</button></div>')+
+    '<div class="qfoot">'+(dn?'<button class="sm" data-un="'+q.id+'">↩ Отменить выполнение</button><button class="sm red" data-dd="'+q.id+'">Удалить</button>':'<button class="sm red" data-x="'+q.id+'">Удалить задачу</button>')+'</div></div>';
+}
 function qHtml(q){
   var dn=isDone(q),sc=subCount(q),open=!!openQ[q.id];
   var meta=q.daily?'каждый день':'';
   if(sc.n)meta+=(meta?' · ':'')+'Подзадачи: '+sc.c+'/'+sc.n;
   var panel='';
-  if(open){
-    panel='<div class="qsub">'+(q.subs||[]).map(function(s){
-      var sd=subDone(q,s);
-      return '<div class="sb'+(sd?' sdone':'')+'"><button class="sbc" data-sc="'+q.id+'|'+s.id+'" aria-label="Отметить подзадачу"'+(dn?' disabled':'')+'>'+(sd?'✓':'')+'</button><span class="sbt">'+esc(s.t)+'</span>'+(dn?'':'<button class="del" data-sx="'+q.id+'|'+s.id+'" aria-label="Удалить подзадачу">✕</button>')+'</div>';
-    }).join('')+(dn?'':'<div class="sadd"><input type="text" data-si="'+q.id+'" placeholder="Добавить подзадачу" maxlength="120" aria-label="Добавить подзадачу"><button class="btn" data-sa="'+q.id+'">Добавить</button></div>')+
-    '<div class="qfoot">'+(dn?'<button class="sm" data-un="'+q.id+'">↩ Отменить выполнение</button><button class="sm red" data-dd="'+q.id+'">Удалить</button>':'<button class="sm red" data-x="'+q.id+'">Удалить задачу</button>')+'</div></div>';
-  }
+  if(open)panel=qPanel(q,dn);
   var act='';
   return '<div class="card q'+(dn?' done':'')+'"><button class="chk" data-c="'+q.id+'" aria-label="Выполнить"'+(dn?' disabled':'')+'>'+(dn?'✓':'')+'</button>'+
   '<div class="t">'+esc(q.t)+'<div class="m">'+meta+'</div></div>'+
@@ -553,7 +558,18 @@ function renderNotes(){
   if(!ncY)ncInit();
   if(nView==='list')renderNotesList();else renderNotesCal();
 }
+var qDraft=[];
+function renderQDraft(){
+  $('qsubs').innerHTML=qDraft.map(function(t,i){return '<div class="sb"><span class="sbt">'+esc(t)+'</span><button class="del" type="button" data-qdx="'+i+'" aria-label="Убрать подзадачу">✕</button></div>'}).join('');
+}
+function addQDraft(){
+  var inp=$('qsi'),t=inp.value.trim();
+  if(!t){toast('Введи название подзадачи');return}
+  if(qDraft.length>=30){toast('Не больше 30 подзадач');return}
+  qDraft.push(t.slice(0,120));inp.value='';renderQDraft();inp.focus();
+}
 function openQuestSheet(d){
+  qDraft=[];$('qsi').value='';renderQDraft();
   var td=today(),qd=$('qdate');qd.min=td;qd.value=(d&&d>td)?d:td;
   $('sheet').classList.add('show');$('qt').focus();
 }
@@ -601,7 +617,7 @@ function calDayHtml(d){
     var sc=S.quests.filter(function(q){return q.due===d&&!isDone(q)});
     var td_=t.split('-'),nd_=Math.round((Date.UTC(+pp[0],+pp[1]-1,+pp[2])-Date.UTC(+td_[0],+td_[1]-1,+td_[2]))/864e5),m10=nd_%10,m100=nd_%100;
     h+='<div class="sub" style="margin-top:2px">Наступит через '+nd_+' '+(m10===1&&m100!==11?'день':(m10>=2&&m10<=4&&(m100<12||m100>14)?'дня':'дней'))+'</div>';
-    h+=sc.length?sc.map(function(q){return '<div class="cdl"><i class="dot s"></i><div class="t">'+esc(q.t)+'<div class="m">'+(q.daily?'ежедневная, с этого дня':'запланирована')+'</div></div><button class="del" data-x="'+q.id+'" aria-label="Удалить задачу">✕</button></div>'}).join(''):'<div class="empty">На этот день задач нет.</div>';
+    h+=sc.length?sc.map(function(q){var op=!!openQ[q.id];return '<div class="cdl wr"><i class="dot s"></i><div class="t">'+esc(q.t)+'<div class="m">'+(q.daily?'ежедневная, с этого дня':'запланирована')+((q.subs&&q.subs.length)?' · подзадач: '+q.subs.length:'')+'</div></div><button class="arr'+(op?' on':'')+'" data-ex="'+q.id+'" aria-label="Подзадачи" aria-expanded="'+op+'"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>'+(op?qPanel(q,false):'<button class="del" data-x="'+q.id+'" aria-label="Удалить задачу">✕</button>')+'</div>'}).join(''):'<div class="empty">На этот день задач нет.</div>';
     return h;
   }
   if(d===t){
@@ -769,13 +785,18 @@ document.addEventListener('click',function(e){
   }
   if(id==='ncTitle'){$('ncPick').classList.toggle('hide');return}
   if(id==='calTitle'){$('calPick').classList.toggle('hide');return}
+  if(D.qdx!==undefined){qDraft.splice(+D.qdx,1);renderQDraft();return}
+  if(id==='qsa'){addQDraft();return}
   if(id==='cancelQ'){$('sheet').classList.remove('show');return}
   if(id==='addQ'){
     var t=$('qt').value.trim();if(!t){toast('Введи название задачи');return}
     var td=today(),qv=$('qdate').value;
     if(!/^\d{4}-\d{2}-\d{2}$/.test(qv))qv=td;
     var wasPast=qv<td;if(wasPast)qv=td;
+    var qs=$('qsi').value.trim();if(qs&&qDraft.length<30)qDraft.push(qs.slice(0,120));
     addQuest(t,'gen',$('qd').checked,qv);
+    if(qDraft.length)S.quests[0].subs=qDraft.map(function(x){return{id:uid(),t:x,done:false,dd:null}});
+    qDraft=[];$('qsi').value='';renderQDraft();
     $('qt').value='';$('qd').checked=false;$('sheet').classList.remove('show');
     if(qv>td){var pq=qv.split('-');calY=+pq[0];calM=+pq[1]-1;calSel=qv}
     save();render();
@@ -827,7 +848,7 @@ $('impFile').addEventListener('change',function(){
   r.readAsText(f);
 });
 $('impLbl').addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();$('impFile').click()}});
-document.addEventListener('keydown',function(e){var t=e.target;if(t&&t.dataset&&t.dataset.si&&e.key==='Enter'&&!e.isComposing){e.preventDefault();addSub(t.dataset.si)}});
+document.addEventListener('keydown',function(e){var t=e.target;if(t&&t.id==='qsi'&&e.key==='Enter'&&!e.isComposing){e.preventDefault();addQDraft();return}if(t&&t.dataset&&t.dataset.si&&e.key==='Enter'&&!e.isComposing){e.preventDefault();addSub(t.dataset.si)}});
 $('qt').addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.isComposing){e.preventDefault();$('addQ').click()}});
 $('nsearch').addEventListener('input',function(){nQ=this.value;renderNotes()});
 $('ncMs').addEventListener('change',function(){ncM=+this.value;renderNotes()});
@@ -844,7 +865,7 @@ applyUi();render();showTab('quests');
    Работает только по https:// (GitHub Pages) или на localhost. */
 /* >>> При каждом обновлении меняй это число вместе с номером в sw.js (CACHE_NAME), они должны совпадать. */
 /* при каждом обновлении меняй это число вместе с CACHE_NAME в sw.js (должны совпадать) */
-var APP_VER='v25';
+var APP_VER='v28';
 (function(){
   var p=document.getElementById('verPage');if(!p)return;
   var c=document.getElementById('verCache'),h=document.getElementById('verHint'),t=document.getElementById('toast');
