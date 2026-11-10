@@ -244,6 +244,16 @@ nav button{transition:color .15s}
 #cfm .in{width:100%;max-width:560px;margin:0 auto;background:#0a1530;border:1px solid var(--line);border-bottom:0;border-radius:20px 20px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));box-shadow:0 -8px 30px rgba(0,0,0,.5);animation:sheetUp .25s ease-out}
 #cfm p{margin:8px 0 14px;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--dim)}
 @media (prefers-reduced-motion:reduce){#cfm .in,.arr{animation:none;transition:none}}
+/* ===== v32: сворачиваемый список выполненных ===== */
+.more{min-height:48px;justify-content:space-between;padding:6px 16px;border:1px solid var(--line);border-radius:12px;background:linear-gradient(180deg,rgba(22,44,96,.6),rgba(9,18,44,.85));color:var(--text);font-size:15px}
+/* ===== v31: кнопка скрытия плюса ===== */
+#fab{bottom:calc(100px + env(safe-area-inset-bottom,0px))}
+#fab.off{display:none}
+#fabToggle{position:fixed;right:28px;bottom:calc(68px + env(safe-area-inset-bottom,0px));width:38px;height:24px;padding:0;border-radius:12px;border:1px solid var(--glow);background:#0b1a3d;color:var(--glow);display:grid;place-items:center;cursor:pointer;z-index:10;box-shadow:0 0 8px rgba(58,160,255,.35)}
+#fabToggle svg{transition:transform .2s}
+#fabToggle.up svg{transform:rotate(180deg)}
+#fabToggle:active{background:rgba(58,160,255,.38)}
+@media (prefers-reduced-motion:reduce){#fabToggle svg{transition:none}}
 </style>
 </head>
 <body>
@@ -312,6 +322,7 @@ nav button{transition:color .15s}
 </div>
 
 <button id="fab" aria-label="Новая задача">+</button>
+<button id="fabToggle" aria-label="Скрыть кнопку добавления" aria-expanded="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
 <div id="sheet"><div class="in">
   <b style="font-size:18px" id="sheet-t">Новая задача</b>
   <input type="text" id="qt" placeholder="Что нужно сделать?" maxlength="120" style="margin-top:10px">
@@ -387,11 +398,10 @@ var openQ={},doneMore=false;
 function doneRank(q){for(var i=S.hist.length-1;i>=0;i--)if(S.hist[i].t===q.t)return i;return -1}
 function doneHtml(dn){
   var a=dn.slice().sort(function(x,y){return doneRank(y)-doneRank(x)});
-  var h=qHtml(a[0]);
-  if(a.length>1){
-    h+='<button class="more'+(doneMore?' on':'')+'" data-dm="1" aria-expanded="'+doneMore+'"><span>'+(doneMore?'Скрыть':'Ещё выполнено: '+(a.length-1))+'</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>';
-    if(doneMore)h+=a.slice(1).map(qHtml).join('');
-  }
+  /* v32: весь список выполненных сворачивается целиком (по умолчанию свёрнут), состояние запоминается в S.doneOpen */
+  var op=!!S.doneOpen;
+  var h='<button class="more'+(op?' on':'')+'" data-dm="1" aria-expanded="'+op+'"><span>'+(op?'Скрыть выполненные':'Выполнено сегодня: '+a.length)+'</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>';
+  if(op)h+=a.map(qHtml).join('');
   return h;
 }
 function subDone(q,s){return q.daily?s.dd===today():!!s.done}
@@ -476,7 +486,8 @@ function askDelDone(id){
   },true);
 }
 function render(){
-  var act=S.quests.filter(function(q){return !isDone(q)&&!isFuture(q)}),dn=S.quests.filter(isDone);
+  /* Список «Выполнено» на сегодня: только то, что выполнено СЕГОДНЯ (разовые задачи прошлых дней видны в календаре в своём дне). Если дата выполнения неизвестна - показываем как раньше, чтобы ничего не пропало. */
+  var act=S.quests.filter(function(q){return !isDone(q)&&!isFuture(q)}),dn=S.quests.filter(function(q){if(!isDone(q))return false;if(q.daily)return true;var c=lastDone(q.t);return !c||c===today()});
   $('active').innerHTML=act.length?act.map(qHtml).join(''):'<div class="empty">Пока нет задач. Нажми +, чтобы добавить первую.</div>';
   $('doneList').innerHTML=dn.length?doneHtml(dn):'<div class="empty">Пока пусто.</div>';
   renderNotes();
@@ -732,9 +743,11 @@ function showTab(n){
   curTab=n;
   ['quests','notes','prof'].forEach(function(k){$('tab-'+k).classList.toggle('hide',k!==n)});
   document.querySelectorAll('nav button[data-tab]').forEach(function(x){x.classList.toggle('on',x.dataset.tab===n)});
+  $('fabToggle').classList.toggle('hide',n!=='quests'&&n!=='notes');
   $('fab').classList.toggle('hide',n!=='quests'&&n!=='notes');$('fab').setAttribute('aria-label',n==='notes'?'Новая заметка':'Новая задача');$('pagetitle').textContent=TABS[n];window.scrollTo(0,0);
 }
-function applyUi(){calUi();
+function fabUi(){var h=!!S.fabHide,b=$('fabToggle');$('fab').classList.toggle('off',h);b.classList.toggle('up',h);b.setAttribute('aria-expanded',h?'false':'true');b.setAttribute('aria-label',h?'Показать кнопку добавления':'Скрыть кнопку добавления')}
+function applyUi(){calUi();fabUi();
   document.title='Daily Planner';
 }
 
@@ -743,7 +756,7 @@ document.addEventListener('click',function(e){
   var b=e.target.closest('button');
   if(!b){if(e.target.id==='sheet')$('sheet').classList.remove('show');if(e.target.id==='nsheet')$('nsheet').classList.remove('show');if(e.target.id==='msheet')$('msheet').classList.remove('show');if(e.target.id==='cfm')closeCfm();return}
   var D=b.dataset;
-  if(D.dm){doneMore=!doneMore;render();return}
+  if(D.dm){S.doneOpen=!S.doneOpen;save();render();return}
   if(D.ex){openQ[D.ex]=!openQ[D.ex];render();return}
   if(D.sa){addSub(D.sa);return}
   if(D.sc){var psc=D.sc.split('|');toggleSub(psc[0],psc[1]);return}
@@ -777,6 +790,7 @@ document.addEventListener('click',function(e){
   if(id==='cfmNo'){closeCfm();return}
   if(id==='cfmYes'){var cf=cfmFn;closeCfm();if(cf)cf();return}
   if(id==='fab'){if(curTab==='notes'){if(nView==='cal')openMark(null,ncSel);else openNote(null)}else openQuestSheet(calSel);return}
+  if(id==='fabToggle'){S.fabHide=!S.fabHide;save();fabUi();return}
   if(id==='calToggle'){var hid=$('calBox').classList.toggle('hide');b.setAttribute('aria-expanded',hid?'false':'true');$('calArr').textContent=hid?'▾':'▴';S.calHide=hid;save();syncLists();return}
   if(id==='cancelM'){$('msheet').classList.remove('show');return}
   if(id==='addM'){
@@ -874,7 +888,7 @@ applyUi();render();showTab('quests');
    Работает только по https:// (GitHub Pages) или на localhost. */
 /* >>> При каждом обновлении меняй это число вместе с номером в sw.js (CACHE_NAME), они должны совпадать. */
 /* при каждом обновлении меняй это число вместе с CACHE_NAME в sw.js (должны совпадать) */
-var APP_VER='v30';
+var APP_VER='v32';
 (function(){
   var p=document.getElementById('verPage');if(!p)return;
   var c=document.getElementById('verCache'),h=document.getElementById('verHint'),t=document.getElementById('toast');
