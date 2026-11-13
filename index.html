@@ -244,6 +244,9 @@ nav button{transition:color .15s}
 #cfm .in{width:100%;max-width:560px;margin:0 auto;background:#0a1530;border:1px solid var(--line);border-bottom:0;border-radius:20px 20px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));box-shadow:0 -8px 30px rgba(0,0,0,.5);animation:sheetUp .25s ease-out}
 #cfm p{margin:8px 0 14px;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--dim)}
 @media (prefers-reduced-motion:reduce){#cfm .in,.arr{animation:none;transition:none}}
+/* ===== v35: кнопки порядка ===== */
+.qfoot .ord{display:flex;gap:8px;margin-right:auto}
+.sm:disabled{opacity:.35;cursor:default}
 /* ===== v34: аккуратная раскрытая карточка (название, подзадачи, удаление) ===== */
 .plab{font-size:11.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);margin:14px 0 6px}
 .qsub>.plab:first-child{margin-top:2px}
@@ -420,7 +423,22 @@ function qPanel(q,dn){
       var sd=subDone(q,s);
       return '<div class="sb'+(sd?' sdone':'')+'"><button class="sbc" data-sc="'+q.id+'|'+s.id+'" aria-label="Отметить подзадачу"'+(dn?' disabled':'')+'>'+(sd?'✓':'')+'</button><span class="sbt">'+esc(s.t)+'</span>'+(dn?'':'<button class="del" data-sx="'+q.id+'|'+s.id+'" aria-label="Удалить подзадачу">✕</button>')+'</div>';
     }).join('')+(dn?'':'<div class="sadd"><input type="text" data-si="'+q.id+'" placeholder="Добавить подзадачу" maxlength="120" aria-label="Добавить подзадачу"><button class="btn ic" data-sa="'+q.id+'" aria-label="Добавить подзадачу">+</button></div>')+
-    '<div class="qfoot">'+(dn?'<button class="sm" data-un="'+q.id+'">↩ Отменить выполнение</button><button class="sm red" data-dd="'+q.id+'">Удалить</button>':'<button class="sm red" data-x="'+q.id+'">Удалить задачу</button>')+'</div></div>';
+    '<div class="qfoot">'+(dn?'<button class="sm" data-un="'+q.id+'">↩ Отменить выполнение</button><button class="sm red" data-dd="'+q.id+'">Удалить</button>':ordHtml(q)+'<button class="sm red" data-x="'+q.id+'">Удалить задачу</button>')+'</div></div>';
+}
+/* v35: порядок задач. Двигаем задачу выше/ниже среди задач того же списка (активные или один будущий день) */
+function orderList(q){return isFuture(q)?S.quests.filter(function(x){return isFuture(x)&&x.due===q.due}):S.quests.filter(function(x){return !isDone(x)&&!isFuture(x)})}
+function ordHtml(q){
+  var l=orderList(q),k=l.indexOf(q);if(l.length<2||k<0)return '';
+  return '<span class="ord"><button class="sm" data-mv="'+q.id+'|-1" aria-label="Переместить выше"'+(k===0?' disabled':'')+'>▲ Выше</button><button class="sm" data-mv="'+q.id+'|1" aria-label="Переместить ниже"'+(k===l.length-1?' disabled':'')+'>▼ Ниже</button></span>';
+}
+function moveQ(id,dir){
+  var q=qById(id);if(!q||isDone(q))return;
+  var l=orderList(q),n=l[l.indexOf(q)+dir];if(!n)return;
+  var i=S.quests.indexOf(q),j=S.quests.indexOf(n);
+  S.quests[i]=n;S.quests[j]=q;
+  save();render();
+  var e=document.querySelector('[data-mv="'+id+'|'+dir+'"]')||document.querySelector('[data-ex="'+id+'"]');
+  if(e&&e.scrollIntoView)e.scrollIntoView({block:'nearest'});
 }
 function qHtml(q){
   var dn=isDone(q),sc=subCount(q),open=!!openQ[q.id];
@@ -825,6 +843,7 @@ document.addEventListener('click',function(e){
   if(D.pdh){askDelPastHist(+D.pdh);return}
   if(D.pdq){askDelPastQuest(D.pdq);return}
   if(D.ta){editTitle(D.ta);return}
+  if(D.mv){var pmv=D.mv.split('|');moveQ(pmv[0],+pmv[1]);return}
   if(D.nt){var nf=b.closest('.nfoot'),no=nf.classList.toggle('open');if(no)nOpen[D.nt]=1;else delete nOpen[D.nt];b.setAttribute('aria-expanded',no?'true':'false');return}
   if(D.nv){nView=D.nv;$('fab').setAttribute('aria-label',nView==='cal'?'Новая отметка':'Новая заметка');renderNotes();return}
   if(D.nday){ncSel=D.nday;renderNotes();return}
@@ -950,7 +969,7 @@ applyUi();render();showTab('quests');
    Работает только по https:// (GitHub Pages) или на localhost. */
 /* >>> При каждом обновлении меняй это число вместе с номером в sw.js (CACHE_NAME), они должны совпадать. */
 /* при каждом обновлении меняй это число вместе с CACHE_NAME в sw.js (должны совпадать) */
-var APP_VER='v34';
+var APP_VER='v35';
 (function(){
   var p=document.getElementById('verPage');if(!p)return;
   var c=document.getElementById('verCache'),h=document.getElementById('verHint'),t=document.getElementById('toast');
