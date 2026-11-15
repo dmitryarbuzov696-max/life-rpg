@@ -318,6 +318,8 @@ nav button{transition:color .15s}
     <b>Резервная копия и импорт</b>
     <p class="sub" style="margin:6px 0 10px">Данные хранятся в памяти телефона. Сохрани копию файлом и при смене телефона или очистке данных восстанови её. Кнопка импорта принимает копию данных и файл со списком задач (JSON).</p>
     <div class="row"><button class="btn" id="expB">Сохранить копию</button><label class="btn" for="impFile" id="impLbl" role="button" tabindex="0">Импортировать из файла</label></div>
+    <div class="stats" style="grid-template-columns:1fr;margin-top:6px"><div class="stat"><span>История выполнений</span><b id="useH">—</b></div><div class="stat"><span>Место в облаке</span><b id="useC">—</b></div></div>
+    <p class="sub" id="useHint" style="margin:8px 0 4px"></p>
     <!-- Скрытый input: НЕ display:none, а «невидимый» (так надёжнее открывается файловый менеджер на iOS и Android) -->
     <input type="file" id="impFile" class="vh" accept=".json,application/json,text/plain">
   </div></details>
@@ -390,9 +392,29 @@ function p2(n){return String(n).padStart(2,'0')}
 function ds(d){return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate())}
 function today(){return ds(new Date())}
 function ad(s,n){var a=s.split('-');return ds(new Date(+a[0],+a[1]-1,+a[2]+n))}
-function load(){try{var r=localStorage.getItem(KEY);if(r){var o=Object.assign(def(),JSON.parse(r));['quests','notes','marks','log','hist','rewards','titles'].forEach(function(k){if(!Array.isArray(o[k]))o[k]=[]});if(!o.stats||typeof o.stats!=='object')o.stats={};o.quests.forEach(function(q){q.created=q.created||today();q.chk=q.chk||q.created});STAT_KEYS.forEach(function(k){if(typeof o.stats[k]!=='number')o.stats[k]=0});o.notes.forEach(fixNote);o.marks=o.marks.filter(fixMark);return o}}catch(e){}return def()}
+/* v40: LOADFAIL - данные в памяти есть, но не прочитались. Тогда save() ничего не пишет, чтобы не затереть их пустыми */
+var LOADFAIL=false;
+function load(){LOADFAIL=false;var r=null;try{r=localStorage.getItem(KEY);if(r){var o=Object.assign(def(),JSON.parse(r));['quests','notes','marks','log','hist','rewards','titles'].forEach(function(k){if(!Array.isArray(o[k]))o[k]=[]});['quests','notes','marks','log','hist'].forEach(function(k){o[k]=o[k].filter(function(x){return x&&typeof x==='object'})});/* v38: одна битая запись больше не обнуляет все данные */if(!o.stats||typeof o.stats!=='object')o.stats={};o.quests.forEach(function(q){q.created=q.created||today();q.chk=q.chk||q.created});STAT_KEYS.forEach(function(k){if(typeof o.stats[k]!=='number')o.stats[k]=0});o.notes.forEach(fixNote);o.marks=o.marks.filter(fixMark);try{fillDoneAt(o)}catch(e){}try{compactHist(o)}catch(e){}/* v40: ошибка в доп. обработке не мешает загрузке */return o}}catch(e){if(r)LOADFAIL=true}return def()}
+/* v39: лимиты. HMAX - сколько выполнений хранится; CMAX - размер данных для облака (то же число, что MAXLEN в модуле облака внизу) */
+var HMAX=6000,CMAX=400000;
+function dataLen(o){var c=o.cloud;try{delete o.cloud;return JSON.stringify(o).length}catch(e){return 0}finally{if(c!==undefined)o.cloud=c}}
+/* v39: сжатие старой истории. Включается ТОЛЬКО когда места мало (записей больше 2500 или данных больше половины лимита облака).
+   У записей старше 90 дней список подзадач заменяется на короткое «выполнено X/Y» (поле sn). Название и дата остаются. */
+function compactHist(o){
+  if(o.hist.length<=2500&&dataLen(o)<=CMAX/2)return;
+  var lim=ad(today(),-90);
+  o.hist.forEach(function(h){if(h.date<lim&&Array.isArray(h.subs)){var c=0;h.subs.forEach(function(s){if(s&&s.d)c++});h.sn=c+'/'+h.subs.length;delete h.subs}});
+}
+/* v38: у разовых задач, выполненных до v37, нет doneAt. Восстанавливаем его из истории: каждая задача берёт свою (самую раннюю незанятую) запись с тем же названием не раньше дня создания */
+function fillDoneAt(o){
+  var used={};
+  o.quests.forEach(function(q){if(!q.daily&&q.done&&q.doneAt)for(var i=0;i<o.hist.length;i++){var h=o.hist[i];if(!used[i]&&h.t===q.t&&h.date===q.doneAt){used[i]=1;break}}});
+  o.quests.filter(function(q){return !q.daily&&q.done&&!q.doneAt}).sort(function(a,b){return a.created<b.created?-1:a.created>b.created?1:0}).forEach(function(q){
+    for(var i=0;i<o.hist.length;i++){var h=o.hist[i];if(!used[i]&&h.t===q.t&&h.date>=q.created){used[i]=1;q.doneAt=h.date;return}}
+  });
+}
 var S=load();
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}try{if(window.LRonSave)window.LRonSave()}catch(e){}}
+function save(){if(LOADFAIL){toast('Данные не прочитались. Сохранение остановлено, чтобы их не затереть.',5000);return}try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast('Не удалось сохранить! Возможно, память телефона заполнена.',4500)}try{if(window.LRonSave)window.LRonSave()}catch(e){}}
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
 function $(id){return document.getElementById(id)}
@@ -480,11 +502,12 @@ function addSub(id){
 }
 function toggleSub(qid,sid){
   var q=qById(qid);if(!q||isDone(q))return;
+  if(q.daily&&isFuture(q)){toast('Ежедневная задача ещё не началась: подзадачи отмечаются с её первого дня',3500);return}/* v38: иначе отметка пропадала в день начала */
   var s=(q.subs||[]).filter(function(x){return x.id===sid})[0];if(!s)return;
   if(q.daily)s.dd=(s.dd===today()?null:today());else s.done=!s.done;
   save();render();
   var sc=subCount(q);
-  if(sc.n&&sc.c===sc.n&&subDone(q,s))ask('Все подзадачи выполнены','Вы выполнили все задачи, отмечаем выполнение основной задачи «'+q.t+'»?','Да, выполнена',function(){complete(qid)});
+  if(!isFuture(q)&&sc.n&&sc.c===sc.n&&subDone(q,s))ask('Все подзадачи выполнены','Вы выполнили все задачи, отмечаем выполнение основной задачи «'+q.t+'»?','Да, выполнена',function(){complete(qid)});
 }
 function delSub(qid,sid){
   var q=qById(qid);if(!q)return;
@@ -498,7 +521,7 @@ function undoQ(id){
   var q=qById(id);if(!q||!isDone(q))return;
   var hi=-1,i;
   var wd=q.daily?q.last:q.doneAt;/* v37: ищем запись истории именно за день выполнения этой задачи */
-  for(i=S.hist.length-1;i>=0;i--)if(S.hist[i].t===q.t&&(!wd||S.hist[i].date===wd)){hi=i;break}
+  if(wd)for(i=S.hist.length-1;i>=0;i--)if(S.hist[i].t===q.t&&S.hist[i].date===wd){hi=i;break}/* v38: без даты не трогаем чужие записи с тем же названием */
   if(q.daily)q.last=null;else{q.done=false;q.doneAt=null}
   if(hi>=0){
     var h=S.hist.splice(hi,1)[0],xp=0;
@@ -516,11 +539,18 @@ function askDelDone(id){
 function render(){
   /* Список «Выполнено» на сегодня: только то, что выполнено СЕГОДНЯ (разовые задачи прошлых дней видны в календаре в своём дне).
      v37: дата берётся из скрытого поля doneAt (ставится при выполнении); у старых задач без него - по истории; без даты вообще - не показываем (данные не удаляются). */
-  var act=S.quests.filter(function(q){return !isDone(q)&&!isFuture(q)}),dn=S.quests.filter(function(q){if(!isDone(q))return false;if(q.daily)return true;return (q.doneAt||lastDone(q.t))===today()});
+  var act=S.quests.filter(function(q){return !isDone(q)&&!isFuture(q)}),dn=S.quests.filter(function(q){if(!isDone(q))return false;if(q.daily)return true;return q.doneAt===today()});
   $('active').innerHTML=act.length?act.map(qHtml).join(''):'<div class="empty">Пока нет задач. Нажми +, чтобы добавить первую.</div>';
   $('doneList').innerHTML=dn.length?doneHtml(dn):'<div class="empty">Пока пусто.</div>';
   renderNotes();
   renderCal();
+  if(curTab==='prof')try{renderUsage()}catch(e){}
+}
+/* v39: счётчики в Профиле → Данные */
+function renderUsage(){
+  var n=S.hist.length,p=Math.round(dataLen(S)/CMAX*100);
+  $('useH').textContent=n+' из '+HMAX;$('useC').textContent=p+'%';
+  $('useHint').textContent=(n>2500||p>50)?'Места становится мало: у записей старше 3 месяцев списки подзадач сжимаются (названия и даты остаются).':'Места достаточно.';
 }
 
 /* ---------- Заметки ---------- */
@@ -650,21 +680,23 @@ function dayData(d){
   done.forEach(function(h){dt[h.t]=1});
   if(d<=t)S.quests.forEach(function(q){
     if(q.created>d||dt[q.t])return;
-    if(q.daily){if(d>q.created||d===t)miss.push(q)}
-    else{var c=q.done?(q.doneAt||lastDone(q.t)):null;if(q.done&&(!c||c<=d))return;open.push(q)}
+    if(q.daily){if((d>q.created||d===t)&&!(S.histCut&&d<=S.histCut))miss.push(q)}
+    else{var c=q.done?(q.doneAt||null):null;if(q.done&&(!c||c<=d))return;open.push(q)}
   });
   return{done:done,miss:miss,open:open};
 }
 function calItem(cls,title,meta){return '<div class="cdl"><i class="dot '+cls+'"></i><div class="t">'+esc(title)+'<div class="m">'+meta+'</div></div></div>'}
-function pastRow(cls,title,meta,key,q,day,delAttr,snap){
-  /* v34: если при выполнении был сохранён снимок подзадач (snap), показываем его; иначе (старые записи) - текущие подзадачи задачи */
-  var op=!!openQ[key],subs=snap&&snap.length?snap.map(function(s){return{t:s.t,sd:!!s.d}}):((q&&q.subs)||[]).map(function(s){return{t:s.t,sd:q.daily?s.dd===day:!!s.done}});
+function pastRow(cls,title,meta,key,q,day,delAttr,snap,cut){
+  /* v34: если при выполнении был сохранён снимок подзадач (snap), показываем его; иначе (старые записи) - текущие подзадачи задачи
+     v39: cut - запись сжата (список подзадач удалён ради места), осталось только «выполнено X/Y» */
+  if(cut){meta+=(meta?' · ':'')+'подзадачи: '+cut}
+  var op=!!openQ[key],subs=cut?[]:snap&&snap.length?snap.map(function(s){return{t:s.t,sd:!!s.d}}):((q&&q.subs)||[]).map(function(s){return{t:s.t,sd:q.daily?s.dd===day:!!s.done}});
   if(subs.length)meta+=(meta?' · ':'')+'подзадач: '+subs.length;
   var panel='';
   if(op){
     panel='<div class="qsub">'+(subs.length?'<div class="plab">Подзадачи</div>'+subs.map(function(s){
       return '<div class="sb'+(s.sd?' sdone':'')+'"><button class="sbc" disabled aria-label="Подзадача">'+(s.sd?'✓':'')+'</button><span class="sbt">'+esc(s.t)+'</span></div>';
-    }).join(''):'<div class="sub" style="margin:0 0 6px">Подзадач нет.</div>')+
+    }).join(''):'<div class="sub" style="margin:0 0 6px">'+(cut?'Список подзадач этого дня сжат ради места (старая запись).':'Подзадач нет.')+'</div>')+
     '<div class="qfoot"><button class="sm red" '+delAttr+'>Удалить</button></div></div>';
   }
   return '<div class="cdl wr"><i class="dot '+cls+'"></i><div class="t">'+esc(title)+'<div class="m">'+meta+'</div></div><button class="arr'+(op?' on':'')+'" data-ex="'+key+'" aria-label="Подробности и подзадачи" aria-expanded="'+op+'"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>'+panel+'</div>';
@@ -684,7 +716,7 @@ function askDelPastHist(i){
 }
 function askDelPastQuest(id){
   var q=qById(id);if(!q)return;
-  ask('Удалить задачу?','«'+q.t+'»'+(q.daily?'\nЭто ежедневная задача: она будет удалена совсем.':''),'Удалить',function(){
+  ask('Удалить задачу?','«'+q.t+'»'+(q.daily?'\nЭто ежедневная задача: она будет удалена совсем.':(!q.done?'\nЗадача ещё не выполнена: она удалится и из активных.':'')),'Удалить',function(){
     S.quests=S.quests.filter(function(z){return z.id!==id});S.deleted++;save();render();toast('Задача удалена');
   },true);
 }
@@ -721,7 +753,7 @@ function calDayHtml(d){
     S.hist.forEach(function(x,i){
       if(x.date!==d)return;
       var hq=S.quests.filter(function(z){return z.t===x.t&&(z.daily||z.done)})[0]||S.quests.filter(function(z){return z.t===x.t})[0];
-      h+=pastRow('g',x.t,'','p'+d+'|h'+i,hq,d,'data-pdh="'+i+'"',x.subs);
+      h+=pastRow('g',x.t,'','p'+d+'|h'+i,hq,d,'data-pdh="'+i+'"',x.subs,x.sn);
     });
   }
   var late=d<t;
@@ -755,7 +787,7 @@ function renderCal(){
   for(i=0;i<off;i++)h+='<div></div>';
   for(var d=1;d<=dim;d++){
     var k=calY+'-'+p2(calM+1)+'-'+p2(d),g=dc[k]>0,r=false;
-    if(k<t)r=dl.some(function(q){return q.created<k&&!dk[k+'|'+q.t]});
+    if(k<t&&!(S.histCut&&k<=S.histCut))r=dl.some(function(q){return q.created<k&&!dk[k+'|'+q.t]});
     h+='<button class="cd'+(k===t?' today':'')+(k===calSel?' sel':'')+(k>t?' fut':'')+'" data-day="'+k+'" aria-label="'+d+'"><span>'+d+'</span><span class="dots">'+(g?'<i class="dot g"></i>':'')+(r?'<i class="dot r"></i>':'')+(sch[k]?'<i class="dot s"></i>':'')+'</span></button>';
   }
   $('calGrid').innerHTML=h;
@@ -772,7 +804,7 @@ function complete(id){
   S.log.push({d:t0,xp:0});if(S.log.length>3000)S.log=S.log.slice(-3000);
   var hh={t:q.t,s:q.s,d:0,date:t0};
   if(q.subs&&q.subs.length)hh.subs=q.subs.map(function(s){return{t:s.t,d:subDone(q,s)?1:0}});
-  S.hist.push(hh);if(S.hist.length>3000)S.hist=S.hist.slice(-3000);
+  S.hist.push(hh);try{compactHist(S)}catch(e){}if(S.hist.length>HMAX){S.hist=S.hist.slice(-HMAX);S.histCut=S.hist[0].date}/* v38: до этой даты история неполная, пропуски там не показываем */
   save();render();toast('Готово ✓');
 }
 function addQuest(t,s,daily,due){
@@ -819,7 +851,7 @@ function saveFile(name,text){
 
 var curTab='quests';
 function showTab(n){
-  curTab=n;
+  curTab=n;if(n==='prof')try{renderUsage()}catch(e){}
   ['quests','notes','prof'].forEach(function(k){$('tab-'+k).classList.toggle('hide',k!==n)});
   document.querySelectorAll('nav button[data-tab]').forEach(function(x){x.classList.toggle('on',x.dataset.tab===n)});
   $('fabToggle').classList.toggle('hide',n!=='quests'&&n!=='notes');
@@ -872,7 +904,7 @@ document.addEventListener('click',function(e){
   if(id==='cancelN'){$('nsheet').classList.remove('show');return}
   if(id==='cfmNo'){closeCfm();return}
   if(id==='cfmYes'){var cf=cfmFn;closeCfm();if(cf)cf();return}
-  if(id==='fab'){if(curTab==='notes'){if(nView==='cal')openMark(null,ncSel);else openNote(null)}else openQuestSheet(calSel);return}
+  if(id==='fab'){if(curTab==='notes'){if(nView==='cal')openMark(null,ncSel);else openNote(null)}else openQuestSheet($('calBox').classList.contains('hide')?'':calSel);return}
   if(id==='fabToggle'){S.fabHide=!S.fabHide;save();fabUi();return}
   if(id==='calToggle'){var hid=$('calBox').classList.toggle('hide');b.setAttribute('aria-expanded',hid?'false':'true');$('calArr').textContent=hid?'▾':'▴';S.calHide=hid;save();syncLists();return}
   if(id==='cancelM'){$('msheet').classList.remove('show');return}
@@ -940,16 +972,20 @@ function importData(o){
   var hasN=('read' in k)||('calm' in k)||('body' in k)||('home' in k)||('mind' in k)||('art' in k);
   var hasG=('str' in k)||('int' in k)||('end' in k)||('spi' in k);
   if((mode!==null&&mode!=='normal')||(mode===null&&hasG&&!hasN))reject('Эта копия создана в другой версии приложения и не подходит. Данные не изменены.');
-  var oc=S.cloud;localStorage.setItem(KEY,JSON.stringify(data));
-  S=load();calInit();ncInit();nQ='';$('nsearch').value='';applyUi();render();if(oc){S.cloud=oc;save()}
-  return 'Данные импортированы'
+  /* v38: перед заменой данных спрашиваем */
+  ask('Заменить данные копией?','В копии: задач '+data.quests.length+', заметок '+((data.notes||[]).length)+'.\nТекущие данные на этом устройстве'+(S.cloud?' и в облаке':'')+' будут заменены.','Заменить',function(){
+    var oc=S.cloud;try{localStorage.setItem(KEY,JSON.stringify(data))}catch(e){toast('Не удалось сохранить копию: память заполнена',4500);return}
+    S=load();calInit();ncInit();nQ='';$('nsearch').value='';applyUi();render();if(oc){S.cloud=oc;save()}
+    toast('Данные импортированы');
+  },true);
+  return null;
 }
 /* ---------- Мост для облака (см. модуль Firebase внизу) ---------- */
-window.LR={get:function(){return S},apply:function(d){localStorage.setItem(KEY,JSON.stringify(d));S=load();calInit();ncInit();nQ='';$('nsearch').value='';applyUi();render()},setMeta:function(m){S.cloud=m;try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}},ask:ask,toast:toast};
+window.LR={get:function(){return S},apply:function(d){localStorage.setItem(KEY,JSON.stringify(d));S=load();calInit();ncInit();nQ='';$('nsearch').value='';applyUi();render()},setMeta:function(m){if(LOADFAIL)return;var o=S.cloud;if(o&&m&&o.uid===m.uid){if(m.ver===undefined)m.ver=o.ver;if(m.hold===undefined)m.hold=o.hold}S.cloud=m;try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}},ask:ask,toast:toast,busy:function(){return $('cfm').classList.contains('show')}};
 $('impFile').addEventListener('change',function(){
   var inp=this,f=inp.files&&inp.files[0];if(!f)return;
   var r=new FileReader();
-  r.onload=function(){try{toast(importData(JSON.parse(String(r.result).replace(/^\uFEFF/,''))))}catch(e){if(e&&e.rej)toast(e.rej,4500);else toast('Не удалось прочитать файл')}inp.value=''};
+  r.onload=function(){try{var im=importData(JSON.parse(String(r.result).replace(/^\uFEFF/,'')));if(im)toast(im)}catch(e){if(e&&e.rej)toast(e.rej,4500);else toast('Не удалось прочитать файл')}inp.value=''};
   r.onerror=function(){toast('Не удалось прочитать файл');inp.value=''};
   r.readAsText(f);
 });
@@ -977,7 +1013,7 @@ applyUi();render();showTab('quests');
    Работает только по https:// (GitHub Pages) или на localhost. */
 /* >>> При каждом обновлении меняй это число вместе с номером в sw.js (CACHE_NAME), они должны совпадать. */
 /* при каждом обновлении меняй это число вместе с CACHE_NAME в sw.js (должны совпадать) */
-var APP_VER='v37';
+var APP_VER='v40';
 (function(){
   var p=document.getElementById('verPage');if(!p)return;
   var c=document.getElementById('verCache'),h=document.getElementById('verHint'),t=document.getElementById('toast');
@@ -1005,7 +1041,9 @@ var APP_VER='v37';
 if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol)){
   /* Если появилась новая версия и она перехватила управление — один раз перезагружаем страницу, чтобы сразу показать её */
   var hadCtl=!!navigator.serviceWorker.controller,reloaded=false;
-  navigator.serviceWorker.addEventListener('controllerchange',function(){if(!hadCtl||reloaded)return;reloaded=true;location.reload()});
+  /* v38: если открыто окно ввода или вопрос, ждём его закрытия, чтобы не потерять набранный текст */
+  var rl=function(){if(document.querySelector('#sheet.show,#nsheet.show,#msheet.show,#cfm.show')){setTimeout(rl,2000);return}location.reload()};
+  navigator.serviceWorker.addEventListener('controllerchange',function(){if(!hadCtl||reloaded)return;reloaded=true;rl()});
   window.addEventListener('load',function(){
     navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(function(reg){
       reg.update().catch(function(){});
@@ -1021,7 +1059,7 @@ const U='https://www.gstatic.com/firebasejs/13.2.0/';
 const CFG={apiKey:"AIzaSyAZ8wDIgDOnKKf5GdyM0X7LxeKFgQOO3_4",authDomain:"daily-planner-c886a.firebaseapp.com",projectId:"daily-planner-c886a",storageBucket:"daily-planner-c886a.firebasestorage.app",messagingSenderId:"1068482782285",appId:"1:1068482782285:web:3bc7fd3941e03db3bb2804"};
 const MAXLEN=400000, DELAY=4000, OFFMSG='Нет связи с облаком. Данные сохранены на устройстве, отправлю позже.';
 const $=id=>document.getElementById(id), LR=window.LR;
-let fb=null,auth=null,db=null,user=null,timer=null,working=false,paused=false,lastSync=0,loading=null,manual=false;
+let fb=null,auth=null,db=null,user=null,timer=null,working=false,paused=false,lastSync=0,loading=null,manual=false,bigWarn=false;
 const strip=s=>{const o=Object.assign({},s);delete o.cloud;return JSON.stringify(o)};
 const hash=s=>{let h=5381;for(let i=0;i<s.length;i++)h=((h<<5)+h+s.charCodeAt(i))|0;return h+':'+s.length};
 const pristine=s=>!(s.quests||[]).length&&!(s.notes||[]).length&&!(s.marks||[]).length&&!(s.log||[]).length;
@@ -1031,6 +1069,10 @@ function st(t){const e=$('cloudSt');if(e)e.textContent=t}
 function show(){const on=!!user;$('cloudIn').classList.toggle('hide',on);$('cloudNow').classList.toggle('hide',!on);$('cloudOut').classList.toggle('hide',!on);$('cloudCf').classList.toggle('hide',!(on&&paused))}
 function ok(){if(manual){manual=false;LR.toast('Синхронизация успешна')}st('Вход: '+user.email+'. Синхронизировано '+when(Date.now())+'.')}
 const ref=()=>fb.fs.doc(db,'users',user.uid);
+/* v40: защита после обновления. Первый час после установки новой версии изменения сохраняются только на телефоне, облако не перезаписывается автоматически.
+   Если с новой версией что-то не так, в облаке остаются прежние данные (Профиль → Облако → «Взять из облака»). Ручная кнопка «Отправить в облако» работает всегда. */
+const HOLD=3600000;let holdUntil=0,holdTimer=null;
+{const m=LR.get().cloud;if(m&&m.uid){if(m.ver!==window.APP_VER){holdUntil=Date.now()+HOLD;LR.setMeta(Object.assign({},m,{ver:window.APP_VER,hold:holdUntil}))}else if(m.hold>Date.now())holdUntil=m.hold}}
 
 async function init(){
   if(fb)return fb;
@@ -1047,7 +1089,7 @@ async function init(){
 function take(r){
   const d=JSON.parse(r.json);
   if(!d||typeof d.xp!=='number'||!Array.isArray(d.quests))throw new Error('format');
-  d.cloud={uid:user.uid,t:r.t,h:''};
+  const oc=LR.get().cloud||{};d.cloud={uid:user.uid,t:r.t,h:'',ver:oc.ver,hold:oc.hold};
   LR.apply(d);
   LR.setMeta({uid:user.uid,t:r.t,h:hash(strip(LR.get()))});
   ok();
@@ -1058,7 +1100,13 @@ async function doPush(over){
   if(!user||!m||m.uid!==user.uid)return;
   const j=strip(s),h=hash(j);
   if(!over&&h===m.h)return;
-  if(j.length>MAXLEN){st('Данных слишком много для облака (лимит ~400 тыс. символов).');return}
+  if(!over&&Date.now()<holdUntil){
+    st('Новая версия: первый час изменения сохраняются только на телефоне. Облако обновится после '+when(holdUntil)+'.');
+    if(manual){manual=false;LR.toast('Облако обновится после '+when(holdUntil),3500)}
+    if(!holdTimer)holdTimer=setTimeout(()=>{holdTimer=null;flush()},holdUntil-Date.now()+1000);
+    return 'hold';
+  }
+  if(j.length>MAXLEN){st('Данных слишком много для облака (лимит ~400 тыс. символов).');if(!bigWarn){bigWarn=true;LR.toast('Облако переполнено: данные сохраняются только на телефоне',5000)}return}
   const now=Date.now(),R=ref();
   try{
     await fb.fs.runTransaction(db,async tx=>{
@@ -1085,7 +1133,8 @@ async function sync(){
     manual=false;paused=true;show();
     st('Данные на устройстве и в облаке отличаются. Выбери, какие оставить (кнопки ниже). Пока выбор не сделан, ничего не синхронизируется.');
     let rd=null;try{rd=JSON.parse(r.json)}catch(e){}
-    LR.ask('Данные отличаются','На устройстве: '+sum(s)+'.\nВ облаке: '+sum(rd)+' (сохранено '+when(r.t)+').\n\nОтмена: ничего не менять, решить позже в Профиль → Облако. Если берёшь облако, данные здесь будут заменены; сначала можно сохранить копию (Профиль → Данные).','Взять из облака',pull,true);
+    /* v38: если на экране уже открыт другой вопрос, не подменяем его (иначе «Да» могло заменить данные облаком) */
+    if(LR.busy&&LR.busy())LR.toast('Данные на телефоне и в облаке отличаются. Выбери в Профиль → Облако',5000);else LR.ask('Данные отличаются','На устройстве: '+sum(s)+'.\nВ облаке: '+sum(rd)+' (сохранено '+when(r.t)+').\n\nОтмена: ничего не менять, решить позже в Профиль → Облако. Если берёшь облако, данные здесь будут заменены; сначала можно сохранить копию (Профиль → Данные).','Взять из облака',pull,true);
   }catch(e){st(OFFMSG+' ['+((e&&e.code)||(e&&e.message)||'')+']')}
   finally{working=false;show();if(again)sync();else if(manual){manual=false;LR.toast('Синхронизация не удалась',3000)}}
 }
