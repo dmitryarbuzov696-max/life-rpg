@@ -497,8 +497,9 @@ function askUndo(id){
 function undoQ(id){
   var q=qById(id);if(!q||!isDone(q))return;
   var hi=-1,i;
-  for(i=S.hist.length-1;i>=0;i--)if(S.hist[i].t===q.t){hi=i;break}
-  if(q.daily)q.last=null;else q.done=false;
+  var wd=q.daily?q.last:q.doneAt;/* v37: ищем запись истории именно за день выполнения этой задачи */
+  for(i=S.hist.length-1;i>=0;i--)if(S.hist[i].t===q.t&&(!wd||S.hist[i].date===wd)){hi=i;break}
+  if(q.daily)q.last=null;else{q.done=false;q.doneAt=null}
   if(hi>=0){
     var h=S.hist.splice(hi,1)[0],xp=0;
     for(i=S.log.length-1;i>=0;i--)if(S.log[i].d===h.date&&S.log[i].xp===xp){S.log.splice(i,1);break}
@@ -513,8 +514,9 @@ function askDelDone(id){
   },true);
 }
 function render(){
-  /* Список «Выполнено» на сегодня: только то, что выполнено СЕГОДНЯ (разовые задачи прошлых дней видны в календаре в своём дне). Если дата выполнения неизвестна - показываем как раньше, чтобы ничего не пропало. */
-  var act=S.quests.filter(function(q){return !isDone(q)&&!isFuture(q)}),dn=S.quests.filter(function(q){if(!isDone(q))return false;if(q.daily)return true;var c=lastDone(q.t);return !c||c===today()});
+  /* Список «Выполнено» на сегодня: только то, что выполнено СЕГОДНЯ (разовые задачи прошлых дней видны в календаре в своём дне).
+     v37: дата берётся из скрытого поля doneAt (ставится при выполнении); у старых задач без него - по истории; без даты вообще - не показываем (данные не удаляются). */
+  var act=S.quests.filter(function(q){return !isDone(q)&&!isFuture(q)}),dn=S.quests.filter(function(q){if(!isDone(q))return false;if(q.daily)return true;return (q.doneAt||lastDone(q.t))===today()});
   $('active').innerHTML=act.length?act.map(qHtml).join(''):'<div class="empty">Пока нет задач. Нажми +, чтобы добавить первую.</div>';
   $('doneList').innerHTML=dn.length?doneHtml(dn):'<div class="empty">Пока пусто.</div>';
   renderNotes();
@@ -649,7 +651,7 @@ function dayData(d){
   if(d<=t)S.quests.forEach(function(q){
     if(q.created>d||dt[q.t])return;
     if(q.daily){if(d>q.created||d===t)miss.push(q)}
-    else{var c=q.done?lastDone(q.t):null;if(q.done&&(!c||c<=d))return;open.push(q)}
+    else{var c=q.done?(q.doneAt||lastDone(q.t)):null;if(q.done&&(!c||c<=d))return;open.push(q)}
   });
   return{done:done,miss:miss,open:open};
 }
@@ -675,7 +677,7 @@ function askDelPastHist(i){
     S.hist.splice(j,1);
     for(var k=S.log.length-1;k>=0;k--)if(S.log[k].d===h.date&&S.log[k].xp===0){S.log.splice(k,1);break}
     S.count=Math.max(0,S.count-1);
-    var dq=S.quests.filter(function(z){return z.t===h.t&&!z.daily&&z.done})[0];
+    var dq=S.quests.filter(function(z){return z.t===h.t&&!z.daily&&z.done&&z.doneAt===h.date})[0]||S.quests.filter(function(z){return z.t===h.t&&!z.daily&&z.done&&!z.doneAt})[0];
     if(dq){S.quests=S.quests.filter(function(z){return z!==dq});S.deleted++}
     save();render();toast('Удалено');
   },true);
@@ -765,7 +767,7 @@ function toast(t,ms){var e=$('toast');e.textContent=t;e.classList.add('show');cl
 function complete(id){
   var q=qById(id);if(!q||isDone(q))return;
   var t0=today();
-  if(q.daily)q.last=t0;else q.done=true;
+  if(q.daily)q.last=t0;else{q.done=true;q.doneAt=t0}/* v37: скрытая дата выполнения разовой задачи, берётся из часов телефона */
   S.count++;
   S.log.push({d:t0,xp:0});if(S.log.length>3000)S.log=S.log.slice(-3000);
   var hh={t:q.t,s:q.s,d:0,date:t0};
@@ -975,7 +977,7 @@ applyUi();render();showTab('quests');
    Работает только по https:// (GitHub Pages) или на localhost. */
 /* >>> При каждом обновлении меняй это число вместе с номером в sw.js (CACHE_NAME), они должны совпадать. */
 /* при каждом обновлении меняй это число вместе с CACHE_NAME в sw.js (должны совпадать) */
-var APP_VER='v36';
+var APP_VER='v37';
 (function(){
   var p=document.getElementById('verPage');if(!p)return;
   var c=document.getElementById('verCache'),h=document.getElementById('verHint'),t=document.getElementById('toast');
