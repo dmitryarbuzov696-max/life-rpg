@@ -959,7 +959,13 @@ $('ncMs').addEventListener('change',function(){ncM=+this.value;renderNotes()});
 $('ncYs').addEventListener('change',function(){ncY=+this.value;renderNotes()});
 $('calMs').addEventListener('change',function(){calM=+this.value;renderCal()});
 $('calYs').addEventListener('change',function(){calY=+this.value;renderCal()});
-document.addEventListener('visibilitychange',function(){if(!document.hidden)render()});
+/* v36: смена дня, пока приложение открыто (осталось в памяти с вечера): переводим «сегодня» на новый день и перерисовываем */
+var lastDay=today();
+function dayCheck(){var t=today();if(t===lastDay)return false;var was=lastDay;lastDay=t;if(calSel===was)calInit();if(ncSel===was)ncInit();return true}
+document.addEventListener('visibilitychange',function(){if(!document.hidden){dayCheck();render()}});
+window.addEventListener('pageshow',function(){if(dayCheck())render()});
+window.addEventListener('focus',function(){if(dayCheck())render()});
+setInterval(function(){if(dayCheck())render()},60000);
 ncInit();
 applyUi();render();showTab('quests');
 })();
@@ -969,7 +975,7 @@ applyUi();render();showTab('quests');
    Работает только по https:// (GitHub Pages) или на localhost. */
 /* >>> При каждом обновлении меняй это число вместе с номером в sw.js (CACHE_NAME), они должны совпадать. */
 /* при каждом обновлении меняй это число вместе с CACHE_NAME в sw.js (должны совпадать) */
-var APP_VER='v35';
+var APP_VER='v36';
 (function(){
   var p=document.getElementById('verPage');if(!p)return;
   var c=document.getElementById('verCache'),h=document.getElementById('verHint'),t=document.getElementById('toast');
